@@ -5,7 +5,7 @@
 static VkResult vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger)
 {
     PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if(func)
+    if (func)
     {
         return func(instance, pCreateInfo, pAllocator, pMessenger);
     }
@@ -15,36 +15,35 @@ static VkResult vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkD
 static void vc_vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks *pAllocator)
 {
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if(func)
+    if (func)
     {
         func(instance, messenger, pAllocator);
     }
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
+static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
-    switch(messageSeverity)
+    switch (messageSeverity)
     {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            TRACE("[VULKAN]: %s", pCallbackData->pMessage);
-            break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        TRACE("[VULKAN]: %s", pCallbackData->pMessage);
+        break;
 
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            INFO("[VULKAN]: %s", pCallbackData->pMessage);
-            break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        INFO("[VULKAN]: %s", pCallbackData->pMessage);
+        break;
 
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            WARN("[VULKAN]: %s", pCallbackData->pMessage);
-            break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        WARN("[VULKAN]: %s", pCallbackData->pMessage);
+        break;
 
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        ERROR("[VULKAN]: %s", pCallbackData->pMessage);
+        break;
 
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            ERROR("[VULKAN]: %s", pCallbackData->pMessage);
-            break;
-
-        default:
-            TRACE("[VULKAN]: %s", pCallbackData->pMessage);
-            break;
+    default:
+        TRACE("[VULKAN]: %s", pCallbackData->pMessage);
+        break;
     }
     return VK_FALSE;
 }
@@ -53,7 +52,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
 {
     ctx->vk_window_surface = VK_NULL_HANDLE;
 
-    //Create instance
+    // Create instance
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app_info.pApplicationName = desc->app_name;
     app_info.pEngineName = desc->engine_name;
@@ -68,12 +67,12 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
 
     char *debug_ext = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
-    if(desc->enable_debugging)
+    if (desc->enable_debugging)
     {
-        //Concatenate requested exts to debug ext
-        inst_ci.ppEnabledExtensionNames = mem_allocate(sizeof(char*) * inst_ci.enabledExtensionCount, MEMORY_TAG_DARRAY);
+        // Concatenate requested exts to debug ext
+        inst_ci.ppEnabledExtensionNames = mem_allocate(sizeof(char *) * inst_ci.enabledExtensionCount, MEMORY_TAG_DARRAY);
 
-        for(int i = 0; i < desc->extension_count; i++)
+        for (int i = 0; i < desc->extension_count; i++)
         {
             *((char **)&inst_ci.ppEnabledExtensionNames[i + 1]) = desc->extensions[i];
         }
@@ -81,51 +80,59 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
     }
     else
     {
-        inst_ci.ppEnabledExtensionNames = (const char * const*)desc->extensions;
+        inst_ci.ppEnabledExtensionNames = (const char *const *)desc->extensions;
     }
 
     char *layers[1] = {"VK_LAYER_KHRONOS_validation"};
-    inst_ci.ppEnabledLayerNames = (const char * const *)layers;
+    inst_ci.ppEnabledLayerNames = (const char *const *)layers;
 
-    //Check for extension availability
+    // Check for extension availability
     {
         u32 count = 0;
         vkEnumerateInstanceExtensionProperties(NULL, &count, NULL);
         VkExtensionProperties *props = mem_allocate(sizeof(VkExtensionProperties) * count, MEMORY_TAG_RENDERER);
         vkEnumerateInstanceExtensionProperties(NULL, &count, props);
 
-        for(int i = 0; i < inst_ci.enabledExtensionCount; i++)
+        for (int i = 0; i < inst_ci.enabledExtensionCount; i++)
         {
             b8 found = FALSE;
-            for(int j = 0; j < count; j++)
+            for (int j = 0; j < count; j++)
             {
-                if(strcmp(props[j].extensionName, inst_ci.ppEnabledExtensionNames[i]) == 0)
+                if (strcmp(props[j].extensionName, inst_ci.ppEnabledExtensionNames[i]) == 0)
                 {
                     found = TRUE;
                 }
             }
-            if(!found) {FATAL("Extension '%s' not supported by instance.", inst_ci.ppEnabledExtensionNames[i]); return FALSE;}
+            if (!found)
+            {
+                FATAL("Extension '%s' not supported by instance.", inst_ci.ppEnabledExtensionNames[i]);
+                return FALSE;
+            }
         }
     }
 
-    //Check for layers availability
+    // Check for layers availability
     {
         u32 count = 0;
         vkEnumerateInstanceLayerProperties(&count, NULL);
         VkLayerProperties *props = mem_allocate(sizeof(VkLayerProperties) * count, MEMORY_TAG_RENDERER);
         vkEnumerateInstanceLayerProperties(&count, props);
 
-        for(int i = 0; i < inst_ci.enabledLayerCount; i++)
+        for (int i = 0; i < inst_ci.enabledLayerCount; i++)
         {
             b8 found = FALSE;
-            for(int j = 0; j < count; j++)
+            for (int j = 0; j < count; j++)
             {
-                if(strcmp(props[j].layerName, inst_ci.ppEnabledLayerNames[i]) == 0)
+                if (strcmp(props[j].layerName, inst_ci.ppEnabledLayerNames[i]) == 0)
                 {
                     found = TRUE;
                 }
             }
-            if(!found) {FATAL("Layer '%s' not supported by instance.", inst_ci.ppEnabledLayerNames[i]); return FALSE;}
+            if (!found)
+            {
+                FATAL("Layer '%s' not supported by instance.", inst_ci.ppEnabledLayerNames[i]);
+                return FALSE;
+            }
         }
     }
     TRACE("Extensions and layers all supported.");
@@ -133,9 +140,9 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
     VK_CHECKR(vkCreateInstance(&inst_ci, NULL, &ctx->vk_instance), "Could not create instance");
 
     ctx->vk_debug_messenger = VK_NULL_HANDLE;
-    if(desc->enable_debugging)
+    if (desc->enable_debugging)
     {
-        mem_free((void*)inst_ci.ppEnabledExtensionNames);
+        mem_free((void *)inst_ci.ppEnabledExtensionNames);
 
         VkDebugUtilsMessengerCreateInfoEXT dbg_info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
         dbg_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -158,15 +165,15 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
 
     INFO("%d physical devices detected.", physical_device_count);
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
-    for(int i = 0; i < physical_device_count; i++)
+    for (int i = 0; i < physical_device_count; i++)
     {
-        if(_vc_priv_is_physical_device_suitable(ctx, query, physical_devices[i], ctx->vk_window_surface))
+        if (_vc_priv_is_physical_device_suitable(ctx, query, physical_devices[i], ctx->vk_window_surface))
         {
             physical_device = physical_devices[i];
         }
     }
 
-    if(!physical_device)
+    if (!physical_device)
     {
         ERROR("No device respecting query found.");
         return FALSE;
@@ -178,7 +185,52 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
     INFO("Selecting device : '%s'", props.deviceName);
 
     ctx->vk_selected_physical_device = physical_device;
+
+    TRACE("Creating device");
+
+    VkDeviceCreateInfo device_ci = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+    device_ci.
+
     return TRUE;
+}
+
+i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
+{
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, NULL);
+    VkQueueFamilyProperties *queue_properties = mem_allocate(sizeof(VkQueueFamilyProperties) * queue_family_count, MEMORY_TAG_RENDERER);
+    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, queue_properties);
+
+    i32 queue_id = -1;
+    for (int i = 0; i < queue_family_count; i++)
+    {
+        if (queue_properties->queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            queue_id = i;
+            goto queue_found;
+        }
+
+        if (queue_properties->queueFlags & VK_QUEUE_COMPUTE_BIT)
+        {
+            queue_id = i;
+            goto queue_found;
+        }
+
+        if (surface != VK_NULL_HANDLE)
+        {
+            VkBool32 present_support = FALSE;
+            vkGetPhysicalDeviceSurfaceSupportKHR(phys_device, i, surface, &present_support);
+            if (present_support)
+            {
+                queue_id = i;
+                goto queue_found;
+            }
+        }
+    }
+
+queue_found:
+    mem_free(queue_properties);
+    return queue_id;
 }
 
 b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
@@ -186,7 +238,7 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(phys_device, &props);
 
-    if((query.allowed_types & props.deviceType) == 0)
+    if ((query.allowed_types & props.deviceType) == 0)
     {
         return FALSE;
     }
@@ -195,7 +247,8 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
     vkGetPhysicalDeviceFeatures(phys_device, &features);
 
     /* ---------------- Features ---------------- */
-    if(query.requested_features.geometryShader && !features.geometryShader) return FALSE;
+    if (query.requested_features.geometryShader && !features.geometryShader)
+        return FALSE;
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, NULL);
@@ -206,29 +259,29 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
     b8 has_compute = FALSE;
     b8 has_present = FALSE;
 
-    if(query.supports_present & !surface)
+    if (query.supports_present & !surface)
     {
         ERROR("A window surface is necessary when a present queue is requested in query.");
     }
 
-    for(int i = 0; i < queue_family_count; i++)
+    for (int i = 0; i < queue_family_count; i++)
     {
-        if(queue_properties->queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        if (queue_properties->queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
             has_graphics = TRUE;
             has_compute = TRUE;
         }
 
-        if(queue_properties->queueFlags & VK_QUEUE_COMPUTE_BIT)
+        if (queue_properties->queueFlags & VK_QUEUE_COMPUTE_BIT)
         {
             has_compute = TRUE;
         }
 
-        if(surface != VK_NULL_HANDLE)
+        if (surface != VK_NULL_HANDLE)
         {
             VkBool32 present_support = FALSE;
             vkGetPhysicalDeviceSurfaceSupportKHR(phys_device, i, surface, &present_support);
-            if(present_support)
+            if (present_support)
             {
                 has_present = TRUE;
             }
@@ -237,13 +290,15 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
 
     mem_free(queue_properties);
 
-    if(query.supports_graphics && !has_graphics) return FALSE;
-    if(query.supports_compute && !has_compute) return FALSE;
-    if(query.supports_present && !has_present) return FALSE;
+    if (query.supports_graphics && !has_graphics)
+        return FALSE;
+    if (query.supports_compute && !has_compute)
+        return FALSE;
+    if (query.supports_present && !has_present)
+        return FALSE;
 
     return TRUE;
 }
-
 
 b8 vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window)
 {
@@ -255,12 +310,12 @@ void vc_destroy_ctx(vc_ctx *ctx)
 {
     TRACE("Destroying vc context.");
 
-    if(ctx->vk_window_surface)
+    if (ctx->vk_window_surface)
     {
         vkDestroySurfaceKHR(ctx->vk_instance, ctx->vk_window_surface, NULL);
     }
 
-    if(ctx->vk_debug_messenger)
+    if (ctx->vk_debug_messenger)
     {
         vc_vkDestroyDebugUtilsMessengerEXT(ctx->vk_instance, ctx->vk_debug_messenger, NULL);
     }

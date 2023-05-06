@@ -1,6 +1,6 @@
 #include "../base/base.h"
-#include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 
 typedef struct
 {
@@ -22,12 +22,31 @@ typedef struct
     VkPhysicalDeviceFeatures requested_features;
 } physical_device_query;
 
+typedef enum
+{
+    VC_GRAPHICS_QUEUE = 1,
+    VC_COMPUTE_QUEUE,
+    VC_PRESENT_QUEUE
+} vc_queue_type;
+
 typedef struct
 {
     VkInstance               vk_instance;
     VkDebugUtilsMessengerEXT vk_debug_messenger;
     VkSurfaceKHR             vk_window_surface;
     VkPhysicalDevice         vk_selected_physical_device;
+    VkDevice                 vk_device;
+
+    struct queues
+    {
+        u32     graphics_index;
+        u32     compute_index;
+        u32     present_index;
+        VkQueue graphics_queue;
+        VkQueue compute_queue;
+        VkQueue present_queue;
+    } queues;
+
 } vc_ctx;
 
 #define VK_CHECK(s, m)                                                           \
