@@ -1,19 +1,40 @@
 #include "base/base.h"
 #include "vulcain/vulcain.h"
+#include <GLFW/glfw3.h>
+
+GLFWwindow *window;
 
 int main(i32 argc, char **argv)
 {
     INFO("Hello, World ! Welcome to vulcain !");
-    
+
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    window = glfwCreateWindow(1920, 1080, "Hello !", NULL, NULL);
+    glfwShowWindow(window);
+
+    u32 exts_count = 0;
+    const char **exts = glfwGetRequiredInstanceExtensions(&exts_count);
+
     vc_ctx ctx = {0};
     vc_create_ctx(&ctx, &(instance_desc){
         .app_name = "Playground",
         .engine_name = "Playground",
         .engine_version = VK_MAKE_VERSION(0, 0, 0),
         .enable_debugging = TRUE,
-        .extension_count = 0,
-        .extensions = NULL
+        .extension_count = exts_count,
+        .extensions = (char **)exts
     });
+
+    while(!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+    }
+
+    vc_destroy_ctx(&ctx);
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return 0;
 }

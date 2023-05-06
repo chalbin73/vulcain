@@ -15,9 +15,11 @@ typedef struct
 typedef struct
 {
     VkInstance vk_instance;
+    VkDebugUtilsMessengerEXT vk_debug_messenger;
 } vc_ctx;
 
 #define VK_CHECK(s, m) do{ VkResult _res = s; if(_res != VK_SUCCESS) {ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res);} }while(0);
 #define VK_CHECKR(s, m) do{ VkResult _res = s; if(_res != VK_SUCCESS) {ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); return FALSE; } }while(0);
 
 b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc);
+void vc_destroy_ctx(vc_ctx *ctx);
