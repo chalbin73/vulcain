@@ -1,5 +1,6 @@
 #include "../base/base.h"
 #include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>
 
 typedef struct
 {
@@ -14,12 +15,44 @@ typedef struct
 
 typedef struct
 {
-    VkInstance vk_instance;
+    b8                       supports_graphics;
+    b8                       supports_compute;
+    b8                       supports_present;
+    VkPhysicalDeviceType     allowed_types;
+    VkPhysicalDeviceFeatures requested_features;
+} physical_device_query;
+
+typedef struct
+{
+    VkInstance               vk_instance;
     VkDebugUtilsMessengerEXT vk_debug_messenger;
+    VkSurfaceKHR             vk_window_surface;
 } vc_ctx;
 
-#define VK_CHECK(s, m) do{ VkResult _res = s; if(_res != VK_SUCCESS) {ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res);} }while(0);
-#define VK_CHECKR(s, m) do{ VkResult _res = s; if(_res != VK_SUCCESS) {ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); return FALSE; } }while(0);
+#define VK_CHECK(s, m)                                                           \
+    do                                                                           \
+    {                                                                            \
+        VkResult _res = s;                                                       \
+        if (_res != VK_SUCCESS)                                                  \
+        {                                                                        \
+            ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); \
+        }                                                                        \
+    }                                                                            \
+    while (0);
+#define VK_CHECKR(s, m)                                                          \
+    do                                                                           \
+    {                                                                            \
+        VkResult _res = s;                                                       \
+        if (_res != VK_SUCCESS)                                                  \
+        {                                                                        \
+            ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); \
+            return FALSE;                                                        \
+        }                                                                        \
+    }                                                                            \
+    while (0);
 
-b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc);
+b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc);
+b8   vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window);
 void vc_destroy_ctx(vc_ctx *ctx);
+
+b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);

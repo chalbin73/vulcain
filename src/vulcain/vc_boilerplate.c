@@ -52,6 +52,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
 
 b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
 {
+    ctx->vk_window_surface = VK_NULL_HANDLE;
+
     //Create instance
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app_info.pApplicationName = desc->app_name;
@@ -148,12 +150,89 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
     return TRUE;
 }
 
+b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
+{
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(phys_device, &props);
+
+    if((query.allowed_types & props.deviceType) == 0)
+    {
+        return FALSE;
+    }
+
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(phys_device, &features);
+
+    /* ---------------- Features ---------------- */
+    if(query.requested_features.geometryShader && !features.geometryShader) return FALSE;
+
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, NULL);
+    VkQueueFamilyProperties *queue_properties = mem_allocate(sizeof(VkQueueFamilyProperties) * queue_family_count, MEMORY_TAG_RENDERER);
+    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, queue_properties);
+
+    b8 has_graphics = FALSE;
+    b8 has_compute = FALSE;
+    b8 has_present = FALSE;
+
+    if(query.supports_present & !surface)
+    {
+        ERROR("A window surface is necessary when a present queue is requested in query.");
+    }
+
+    for(int i = 0; i < queue_family_count; i++)
+    {
+        if(queue_properties->queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            has_graphics = TRUE;
+            has_compute = TRUE;
+        }
+
+        if(queue_properties->queueFlags & VK_QUEUE_COMPUTE_BIT)
+        {
+            has_compute = TRUE;
+        }
+
+        if(surface != VK_NULL_HANDLE)
+        {
+            VkBool32 present_support = FALSE;
+            vkGetPhysicalDeviceSurfaceSupportKHR(phys_device, i, surface, &present_support);
+            if(present_support)
+            {
+                has_present = TRUE;
+            }
+        }
+    }
+
+    mem_free(queue_properties);
+
+    if(query.supports_graphics && !has_graphics) return FALSE;
+    if(query.supports_compute && !has_compute) return FALSE;
+    if(query.supports_present && !has_present) return FALSE;
+
+    return TRUE;
+}
+
+
+b8 vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window)
+{
+    VK_CHECKR(glfwCreateWindowSurface(ctx->vk_instance, window, NULL, &ctx->vk_window_surface), "Could not create GLFW window surface.");
+    return TRUE;
+}
+
 void vc_destroy_ctx(vc_ctx *ctx)
 {
     TRACE("Destroying vc context.");
+
+    if(ctx->vk_window_surface)
+    {
+        vkDestroySurfaceKHR(ctx->vk_instance, ctx->vk_window_surface, NULL);
+    }
+
     if(ctx->vk_debug_messenger)
     {
         vc_vkDestroyDebugUtilsMessengerEXT(ctx->vk_instance, ctx->vk_debug_messenger, NULL);
     }
+
     vkDestroyInstance(ctx->vk_instance, NULL);
 }

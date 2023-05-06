@@ -25,6 +25,7 @@ int main(i32 argc, char **argv)
         .extension_count = exts_count,
         .extensions = (char **)exts
     });
+    vc_get_surface_glfw(&ctx, window);
 
     while(!glfwWindowShouldClose(window))
     {
