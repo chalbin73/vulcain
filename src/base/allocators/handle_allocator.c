@@ -20,10 +20,10 @@ b8 handle_mgr_create(handle_mgr *mgr, void *memory, u64 memory_size, u64 managed
     {
         handle_mgr_block_header hdr = {
             .unique_counter = 0,
-            .free = TRUE
+            .free = TRUE,
         };
 
-        (*(handle_mgr_block_header*)ptr) = hdr;
+        (*(handle_mgr_block_header *)ptr) = hdr;
 
         void **ll_ptr = (void **)((u64)ptr + sizeof(handle_mgr_block_header));
         ptr = (void *)((u64)ptr + mgr->block_size);
@@ -37,26 +37,26 @@ b8 handle_mgr_create(handle_mgr *mgr, void *memory, u64 memory_size, u64 managed
 
 handle handle_mgr_allocate(handle_mgr *mgr)
 {
-    if(mgr->first_free_block)
+    if (mgr->first_free_block)
     {
         handle_mgr_block_header *hdr = mgr->first_free_block;
         ASSERT_MSG(hdr, "No more free blocks.");
         ASSERT_MSG(hdr->free, "Tried to alloc non free block.");
         hdr->free = FALSE;
-        hdr->unique_counter ++;
-        if(hdr->unique_counter == 0) // Overflow case
+        hdr->unique_counter++;
+        if (hdr->unique_counter == 0) // Overflow case
         {
             hdr->unique_counter = 1; // Never have a unique counter of 0, otherwise handles could collide with NULL_HANDLE
         }
 
-        //Get where the free block was pointing to
+        // Get where the free block was pointing to
         void **next = (void **)((u64)hdr + sizeof(handle_mgr_block_header));
         mgr->first_free_block = *next;
 
-        //Compose 
-        u16 idx = ((u64)hdr - (u64)mgr->memory) / mgr->block_size;
+        // Compose
+        u16    idx = ((u64)hdr - (u64)mgr->memory) / mgr->block_size;
         handle hndl = idx | (hdr->unique_counter << 16);
-        mgr->alloced_blocks ++;
+        mgr->alloced_blocks++;
         return hndl;
     }
     return NULL_HANDLE;
@@ -64,14 +64,15 @@ handle handle_mgr_allocate(handle_mgr *mgr)
 
 b8 handle_mgr_free(handle_mgr *mgr, handle hndl)
 {
-    if(hndl)
+    if (hndl)
     {
-        handle_mgr_block_header *hdr = (handle_mgr_block_header*)(((hndl & 0x00000FFFF) * mgr->block_size) + (u64)mgr->memory);
+        handle_mgr_block_header *hdr = (handle_mgr_block_header *)(((hndl & 0x00000FFFF) * mgr->block_size) + (u64)mgr->memory);
 
-        if(hdr->free) return FALSE;
+        if (hdr->free)
+            return FALSE;
 
         hdr->free = TRUE;
-        mgr->alloced_blocks --;
+        mgr->alloced_blocks--;
 
         void **next = (void **)((u64)hdr + sizeof(handle_mgr_block_header));
         *next = mgr->first_free_block;
@@ -84,14 +85,16 @@ b8 handle_mgr_free(handle_mgr *mgr, handle hndl)
 
 void *handle_mgr_deref(handle_mgr *mgr, handle hndl)
 {
-    if(hndl)
+    if (hndl)
     {
-        handle_mgr_block_header *hdr = (handle_mgr_block_header*)(((hndl & 0x00000FFFF) * mgr->block_size) + (u64)mgr->memory);
+        handle_mgr_block_header *hdr = (handle_mgr_block_header *)(((hndl & 0x00000FFFF) * mgr->block_size) + (u64)mgr->memory);
 
-        if(hdr->free) return NULL;
-        if(hdr->unique_counter != ((hndl >> 16) & 0x00000FFFF)) return NULL;
+        if (hdr->free)
+            return NULL;
+        if (hdr->unique_counter != ((hndl >> 16) & 0x00000FFFF))
+            return NULL;
 
-        void *ret = (void*)((u64)hdr + sizeof(handle_mgr_block_header));
+        void *ret = (void *)((u64)hdr + sizeof(handle_mgr_block_header));
         return ret;
     }
     return NULL;

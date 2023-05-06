@@ -33,7 +33,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
             INFO("[VULKAN]: %s", pCallbackData->pMessage);
             break;
 
-
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
             WARN("[VULKAN]: %s", pCallbackData->pMessage);
             break;
@@ -147,6 +146,38 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
         VK_CHECKR(vc_vkCreateDebugUtilsMessengerEXT(ctx->vk_instance, &dbg_info, NULL, &ctx->vk_debug_messenger), "Debug messenger could not be created");
     }
 
+    return TRUE;
+}
+
+b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
+{
+    u32 physical_device_count = 0;
+    vkEnumeratePhysicalDevices(ctx->vk_instance, &physical_device_count, NULL);
+    VkPhysicalDevice *physical_devices = mem_allocate(sizeof(VkPhysicalDevice) * physical_device_count, MEMORY_TAG_RENDERER);
+    vkEnumeratePhysicalDevices(ctx->vk_instance, &physical_device_count, physical_devices);
+
+    INFO("%d physical devices detected.", physical_device_count);
+    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    for(int i = 0; i < physical_device_count; i++)
+    {
+        if(_vc_priv_is_physical_device_suitable(ctx, query, physical_devices[i], ctx->vk_window_surface))
+        {
+            physical_device = physical_devices[i];
+        }
+    }
+
+    if(!physical_device)
+    {
+        ERROR("No device respecting query found.");
+        return FALSE;
+    }
+
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(physical_device, &props);
+
+    INFO("Selecting device : '%s'", props.deviceName);
+
+    ctx->vk_selected_physical_device = physical_device;
     return TRUE;
 }
 

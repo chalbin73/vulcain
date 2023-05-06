@@ -27,6 +27,18 @@ int main(i32 argc, char **argv)
     });
     vc_get_surface_glfw(&ctx, window);
 
+    vc_select_create_device(&ctx, (physical_device_query)
+    {
+        .allowed_types = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU | VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+        .requested_features =
+        {
+            .geometryShader = TRUE
+        },
+        .supports_compute = TRUE,
+        .supports_graphics = TRUE,
+        .supports_present = TRUE
+    });
+
     while(!glfwWindowShouldClose(window))
     {
         glfwPollEvents();

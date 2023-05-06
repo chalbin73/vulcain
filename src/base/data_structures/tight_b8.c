@@ -14,33 +14,34 @@ b8 tb8_set_all_true(b8 *array, u64 bool_count)
 
 b8 tb8_set(b8 *array, u64 index, b8 value)
 {
-    //Get the byte
-    u8 *byte = (u8*)&array[index / 8];
-    
-    //Set the value within the byte
-    if(value)
+    // Get the byte
+    u8 *byte = (u8 *)&array[index / 8];
+
+    // Set the value within the byte
+    if (value)
     {
         *byte |= 1 << (index % 8);
     }
-    else 
+    else
     {
         *byte &= ~(1 << (index % 8));
     }
-    return FALSE;
+    return TRUE;
 }
 
 b8 tb8_toggle(b8 *array, u64 index)
 {
     b8 val = tb8_get(array, index);
-    return tb8_set(array, index, !val);
+    tb8_set(array, index, !val);
+    return val;
 }
 
 b8 tb8_get(b8 *array, u64 index)
 {
-    //Get the byte
-    u8 *byte = (u8*)&array[index / 8];
-    
-    //Get the value within the byte
+    // Get the byte
+    u8 *byte = (u8 *)&array[index / 8];
+
+    // Get the value within the byte
 
     return ((*byte >> (index % 8)) & 1) != 0;
 }
@@ -49,10 +50,10 @@ b8 tb8_some_true(b8 *array, u64 bool_count)
 {
     u64 byte_count = (bool_count / 8) + (bool_count % 8 == 0 ? 0 : 1);
 
-    //Browse every byte
-    for(int i = 0; i < byte_count; i++)
+    // Browse every byte
+    for (int i = 0; i < byte_count; i++)
     {
-        if(array[i])
+        if (array[i])
         {
             return TRUE;
         }
@@ -65,10 +66,10 @@ b8 tb8_all_true(b8 *array, u64 bool_count)
 {
     u64 byte_count = (bool_count / 8) + (bool_count % 8 == 0 ? 0 : 1);
 
-    //Browse every byte
-    for(int i = 0; i < byte_count; i++)
+    // Browse every byte
+    for (int i = 0; i < byte_count; i++)
     {
-        if(array[i] != ((b8)0xFF))
+        if (array[i] != ((b8)0xFF))
         {
             return FALSE;
         }

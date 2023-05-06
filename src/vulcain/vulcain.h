@@ -27,6 +27,7 @@ typedef struct
     VkInstance               vk_instance;
     VkDebugUtilsMessengerEXT vk_debug_messenger;
     VkSurfaceKHR             vk_window_surface;
+    VkPhysicalDevice         vk_selected_physical_device;
 } vc_ctx;
 
 #define VK_CHECK(s, m)                                                           \
@@ -53,6 +54,7 @@ typedef struct
 
 b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc);
 b8   vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window);
+b8   vc_select_create_device(vc_ctx *ctx, physical_device_query query);
 void vc_destroy_ctx(vc_ctx *ctx);
 
 b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);

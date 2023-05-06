@@ -1,8 +1,7 @@
 #pragma once
 
-
-#include "types.h"
 #include "ansi.h"
+#include "types.h"
 #include <argp.h>
 #include <stdarg.h>
 
@@ -19,9 +18,9 @@ enum log_levels
     LOG_LEVEL_COUNT
 };
 
-extern char* log_level_prefixes[LOG_LEVEL_COUNT];
+extern char *log_level_prefixes[LOG_LEVEL_COUNT];
 
-extern char* log_level_colors[LOG_LEVEL_COUNT];
+extern char *log_level_colors[LOG_LEVEL_COUNT];
 
 void logging_start();
 void logging_stop();
@@ -45,9 +44,23 @@ void logging_msg(u32 level, u32 line, char *filename, char *message, ...);
 #define FATAL(msg, ...) \
     logging_msg(LOG_LEVEL_FATAL, __LINE__, __FILE__, msg, ##__VA_ARGS__)
 
-//Assertions
-#define ASSERT_MSG(exp, msg) \
-    if(exp) {} else{FATAL("Assertion (%s) failed, message='%s' on %s:%d, aborting", #exp, msg, __FILE__, __LINE__); DEBUG_BRK();}
+// Assertions
+#define ASSERT_MSG(exp, msg)                                                                            \
+    if (exp)                                                                                            \
+    {                                                                                                   \
+    }                                                                                                   \
+    else                                                                                                \
+    {                                                                                                   \
+        FATAL("Assertion (%s) failed, message='%s' on %s:%d, aborting", #exp, msg, __FILE__, __LINE__); \
+        DEBUG_BRK();                                                                                    \
+    }
 
-#define ASSERT(exp) \
-    if(exp) {} else{FATAL("Assertion (%s) failed, message='' on %s:%d, aborting", #exp, __FILE__, __LINE__); DEBUG_BRK();}
+#define ASSERT(exp)                                                                              \
+    if (exp)                                                                                     \
+    {                                                                                            \
+    }                                                                                            \
+    else                                                                                         \
+    {                                                                                            \
+        FATAL("Assertion (%s) failed, message='' on %s:%d, aborting", #exp, __FILE__, __LINE__); \
+        DEBUG_BRK();                                                                             \
+    }
