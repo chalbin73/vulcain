@@ -34,9 +34,9 @@ int main(i32 argc, char **argv)
         {
             .geometryShader = TRUE
         },
-        .supports_compute = TRUE,
-        .supports_graphics = TRUE,
-        .supports_present = TRUE
+        .request_main_queue = TRUE,
+        .request_compute_queue = TRUE,
+        .request_transfer_queue = FALSE
     });
 
     while(!glfwWindowShouldClose(window))

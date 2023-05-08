@@ -1,6 +1,10 @@
+// clang-format off
 #include "../base/base.h"
-#include <GLFW/glfw3.h>
+#include "../base/data_structures/darray.h"
 #include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>
+
+// clang-format on
 
 typedef struct
 {
@@ -15,18 +19,19 @@ typedef struct
 
 typedef struct
 {
-    b8                       supports_graphics;
-    b8                       supports_compute;
-    b8                       supports_present;
+    b8                       request_main_queue;
+    b8                       request_compute_queue;
+    b8                       request_transfer_queue;
     VkPhysicalDeviceType     allowed_types;
     VkPhysicalDeviceFeatures requested_features;
 } physical_device_query;
 
 typedef enum
 {
-    VC_GRAPHICS_QUEUE = 1,
-    VC_COMPUTE_QUEUE,
-    VC_PRESENT_QUEUE
+    VC_QUEUE_MAIN = 0, // Main queue, supporting graphics, present and compute, main work queue
+    VC_QUEUE_COMPUTE,  // Async compute, for compute work that can be async to main work
+    VC_QUEUE_TRANSFER, // DMA transfer queues usually
+    VC_QUEUE_TYPE_COUNT
 } vc_queue_type;
 
 typedef struct
@@ -39,12 +44,9 @@ typedef struct
 
     struct queues
     {
-        u32     graphics_index;
-        u32     compute_index;
-        u32     present_index;
-        VkQueue graphics_queue;
-        VkQueue compute_queue;
-        VkQueue present_queue;
+        u32     indices[VC_QUEUE_TYPE_COUNT];
+        f32     priorities[VC_QUEUE_TYPE_COUNT];
+        VkQueue queues[VC_QUEUE_TYPE_COUNT];
     } queues;
 
 } vc_ctx;
@@ -76,4 +78,5 @@ b8   vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window);
 b8   vc_select_create_device(vc_ctx *ctx, physical_device_query query);
 void vc_destroy_ctx(vc_ctx *ctx);
 
-b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+b8  _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);

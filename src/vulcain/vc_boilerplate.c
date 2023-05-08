@@ -1,5 +1,7 @@
 #include "vulcain.h"
 
+static const char *const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
+
 // All "boilerplate" objects : instance, device, queues, so on
 
 static VkResult vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger)
@@ -158,6 +160,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
 
 b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
 {
+    // Search suitable physical devices
     u32 physical_device_count = 0;
     vkEnumeratePhysicalDevices(ctx->vk_instance, &physical_device_count, NULL);
     VkPhysicalDevice *physical_devices = mem_allocate(sizeof(VkPhysicalDevice) * physical_device_count, MEMORY_TAG_RENDERER);
@@ -188,10 +191,130 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
 
     TRACE("Creating device");
 
-    VkDeviceCreateInfo device_ci = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-    device_ci.
+    VkDeviceQueueCreateInfo *queues_ci = darray_create(VkDeviceQueueCreateInfo);
+    char                   **device_extensions = darray_create(char *);
+
+    // Search queues
+    if(query.request_main_queue)
+    {
+        VkDeviceQueueCreateInfo queue_ci = 
+        {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueCount = 1,
+            .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_MAIN],
+            .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_MAIN, ctx->vk_selected_physical_device, ctx->vk_window_surface),
+        };
+
+        ctx->queues.indices[VC_QUEUE_MAIN] = queue_ci.queueFamilyIndex;
+
+        darray_push(queues_ci, queue_ci);
+        darray_push(device_extensions, (char*)VC_EXT_VK_KHR_SWAPCHAIN_name);
+    }
+
+    if(query.request_compute_queue)
+    {
+        VkDeviceQueueCreateInfo queue_ci = 
+        {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueCount = 1,
+            .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_COMPUTE],
+            .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_COMPUTE, ctx->vk_selected_physical_device, ctx->vk_window_surface),
+        };
+
+        ctx->queues.indices[VC_QUEUE_COMPUTE] = queue_ci.queueFamilyIndex;
+
+        darray_push(queues_ci, queue_ci);
+    }
+
+    if(query.request_transfer_queue)
+    {
+        VkDeviceQueueCreateInfo queue_ci = 
+        {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueCount = 1,
+            .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_TRANSFER],
+            .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_TRANSFER, ctx->vk_selected_physical_device, ctx->vk_window_surface),
+        };
+
+        ctx->queues.indices[VC_QUEUE_TRANSFER] = queue_ci.queueFamilyIndex;
+
+        darray_push(queues_ci, queue_ci);
+    }
+
+    VkDeviceCreateInfo device_ci =
+        {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+            .queueCreateInfoCount = darray_length(queues_ci),
+            .pQueueCreateInfos = queues_ci,
+            .enabledLayerCount = 0,
+            .enabledExtensionCount = darray_length(device_extensions),
+            .ppEnabledExtensionNames = (const char *const *)device_extensions,
+        };
+
+    VK_CHECKR(vkCreateDevice(ctx->vk_selected_physical_device, &device_ci, NULL, &ctx->vk_device), "Couldn't create logical device.");
+    TRACE("Created device.");
+
+    darray_destroy(queues_ci);
+    darray_destroy(device_extensions);
+
+    if(query.request_main_queue)
+    {
+        vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_MAIN], 0, &ctx->queues.queues[VC_QUEUE_MAIN]);
+    }
+
+    if(query.request_compute_queue)
+    {
+        vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_COMPUTE], 0, &ctx->queues.queues[VC_QUEUE_COMPUTE]);
+    }
+
+    if(query.request_transfer_queue)
+    {
+        vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_TRANSFER], 0, &ctx->queues.queues[VC_QUEUE_TRANSFER]);
+    }
+
+    TRACE("Retrieved queues.");
 
     return TRUE;
+}
+
+i32 _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
+{
+    for(int i = 0; i < prop_count; i ++)
+    {
+        if(props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+i32 _vc_priv_search_dedicated_compute_queue(VkQueueFamilyProperties *props, u32 prop_count)
+{
+    //Searches a dedicated compute
+    for(int i = 0; i < prop_count; i ++)
+    {
+        if((props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && ((props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+i32 _vc_priv_search_dedicated_transfer_queue(VkQueueFamilyProperties *props, u32 prop_count)
+{
+    //Searches a dedicated transfer queue
+    for(int i = 0; i < prop_count; i ++)
+    {
+        if((props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && ((props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
+        {
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
@@ -202,33 +325,25 @@ i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhy
     vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, queue_properties);
 
     i32 queue_id = -1;
-    for (int i = 0; i < queue_family_count; i++)
+    switch (type)
     {
-        if (queue_properties->queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            queue_id = i;
-            goto queue_found;
-        }
+        case VC_QUEUE_MAIN:
+            queue_id = _vc_priv_search_main_queue(queue_properties, queue_family_count);
+            break;
 
-        if (queue_properties->queueFlags & VK_QUEUE_COMPUTE_BIT)
-        {
-            queue_id = i;
-            goto queue_found;
-        }
+        case VC_QUEUE_COMPUTE:
+            queue_id = _vc_priv_search_dedicated_compute_queue(queue_properties, queue_family_count);
+            break;
+        
+        case VC_QUEUE_TRANSFER:
+            queue_id = _vc_priv_search_dedicated_transfer_queue(queue_properties, queue_family_count);
+            break;
 
-        if (surface != VK_NULL_HANDLE)
-        {
-            VkBool32 present_support = FALSE;
-            vkGetPhysicalDeviceSurfaceSupportKHR(phys_device, i, surface, &present_support);
-            if (present_support)
-            {
-                queue_id = i;
-                goto queue_found;
-            }
-        }
+        default:
+            ERROR("Invalid vc_queue_type enum.");
+            break;
     }
 
-queue_found:
     mem_free(queue_properties);
     return queue_id;
 }
@@ -250,51 +365,11 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
     if (query.requested_features.geometryShader && !features.geometryShader)
         return FALSE;
 
-    u32 queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, NULL);
-    VkQueueFamilyProperties *queue_properties = mem_allocate(sizeof(VkQueueFamilyProperties) * queue_family_count, MEMORY_TAG_RENDERER);
-    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, queue_properties);
-
-    b8 has_graphics = FALSE;
-    b8 has_compute = FALSE;
-    b8 has_present = FALSE;
-
-    if (query.supports_present & !surface)
-    {
-        ERROR("A window surface is necessary when a present queue is requested in query.");
-    }
-
-    for (int i = 0; i < queue_family_count; i++)
-    {
-        if (queue_properties->queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            has_graphics = TRUE;
-            has_compute = TRUE;
-        }
-
-        if (queue_properties->queueFlags & VK_QUEUE_COMPUTE_BIT)
-        {
-            has_compute = TRUE;
-        }
-
-        if (surface != VK_NULL_HANDLE)
-        {
-            VkBool32 present_support = FALSE;
-            vkGetPhysicalDeviceSurfaceSupportKHR(phys_device, i, surface, &present_support);
-            if (present_support)
-            {
-                has_present = TRUE;
-            }
-        }
-    }
-
-    mem_free(queue_properties);
-
-    if (query.supports_graphics && !has_graphics)
+    if (query.request_main_queue && _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_MAIN, phys_device, surface) < 0)
         return FALSE;
-    if (query.supports_compute && !has_compute)
+    if (query.request_compute_queue && _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_COMPUTE, phys_device, surface) < 0)
         return FALSE;
-    if (query.supports_present && !has_present)
+    if (query.request_transfer_queue && _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_TRANSFER, phys_device, surface) < 0)
         return FALSE;
 
     return TRUE;
@@ -309,6 +384,11 @@ b8 vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window)
 void vc_destroy_ctx(vc_ctx *ctx)
 {
     TRACE("Destroying vc context.");
+
+    if (ctx->vk_device)
+    {
+        vkDestroyDevice(ctx->vk_device, NULL);
+    }
 
     if (ctx->vk_window_surface)
     {
