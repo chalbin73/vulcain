@@ -4,6 +4,15 @@
 
 GLFWwindow *window;
 
+void glfw_frambuffer_size(GLFWwindow *window, u32 *width, u32 *height)
+{
+    i32 iwidth, iheight = 0;
+    glfwGetFramebufferSize(window, &iwidth, &iheight);
+
+    *width = iwidth;
+    *height = iheight;
+}
+
 int main(i32 argc, char **argv)
 {
     INFO("Hello, World ! Welcome to vulcain !");
@@ -38,6 +47,8 @@ int main(i32 argc, char **argv)
         .request_compute_queue = TRUE,
         .request_transfer_queue = FALSE
     });
+    
+    vc_setup_default_swapchain(&ctx, (vc_get_framebuffer_size_fun)glfw_frambuffer_size, window);
 
     while(!glfwWindowShouldClose(window))
     {

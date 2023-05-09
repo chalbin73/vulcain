@@ -195,46 +195,46 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
     char                   **device_extensions = darray_create(char *);
 
     // Search queues
-    if(query.request_main_queue)
+    if (query.request_main_queue)
     {
-        VkDeviceQueueCreateInfo queue_ci = 
-        {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueCount = 1,
-            .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_MAIN],
-            .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_MAIN, ctx->vk_selected_physical_device, ctx->vk_window_surface),
-        };
+        VkDeviceQueueCreateInfo queue_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .queueCount = 1,
+                .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_MAIN],
+                .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_MAIN, ctx->vk_selected_physical_device, ctx->vk_window_surface),
+            };
 
         ctx->queues.indices[VC_QUEUE_MAIN] = queue_ci.queueFamilyIndex;
 
         darray_push(queues_ci, queue_ci);
-        darray_push(device_extensions, (char*)VC_EXT_VK_KHR_SWAPCHAIN_name);
+        darray_push(device_extensions, (char *)VC_EXT_VK_KHR_SWAPCHAIN_name);
     }
 
-    if(query.request_compute_queue)
+    if (query.request_compute_queue)
     {
-        VkDeviceQueueCreateInfo queue_ci = 
-        {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueCount = 1,
-            .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_COMPUTE],
-            .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_COMPUTE, ctx->vk_selected_physical_device, ctx->vk_window_surface),
-        };
+        VkDeviceQueueCreateInfo queue_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .queueCount = 1,
+                .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_COMPUTE],
+                .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_COMPUTE, ctx->vk_selected_physical_device, ctx->vk_window_surface),
+            };
 
         ctx->queues.indices[VC_QUEUE_COMPUTE] = queue_ci.queueFamilyIndex;
 
         darray_push(queues_ci, queue_ci);
     }
 
-    if(query.request_transfer_queue)
+    if (query.request_transfer_queue)
     {
-        VkDeviceQueueCreateInfo queue_ci = 
-        {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueCount = 1,
-            .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_TRANSFER],
-            .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_TRANSFER, ctx->vk_selected_physical_device, ctx->vk_window_surface),
-        };
+        VkDeviceQueueCreateInfo queue_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .queueCount = 1,
+                .pQueuePriorities = &ctx->queues.priorities[VC_QUEUE_TRANSFER],
+                .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_TRANSFER, ctx->vk_selected_physical_device, ctx->vk_window_surface),
+            };
 
         ctx->queues.indices[VC_QUEUE_TRANSFER] = queue_ci.queueFamilyIndex;
 
@@ -257,17 +257,17 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
     darray_destroy(queues_ci);
     darray_destroy(device_extensions);
 
-    if(query.request_main_queue)
+    if (query.request_main_queue)
     {
         vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_MAIN], 0, &ctx->queues.queues[VC_QUEUE_MAIN]);
     }
 
-    if(query.request_compute_queue)
+    if (query.request_compute_queue)
     {
         vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_COMPUTE], 0, &ctx->queues.queues[VC_QUEUE_COMPUTE]);
     }
 
-    if(query.request_transfer_queue)
+    if (query.request_transfer_queue)
     {
         vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_TRANSFER], 0, &ctx->queues.queues[VC_QUEUE_TRANSFER]);
     }
@@ -277,37 +277,111 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
     return TRUE;
 }
 
+b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
+{
+    VkSwapchainCreateInfoKHR sc_ci =
+        {
+            .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+            .surface = ctx->vk_window_surface,
+            .minImageCount = ctx->swapchain_conf.image_count,
+            .imageFormat = ctx->swapchain_conf.swapchain_format.format,
+            .imageColorSpace = ctx->swapchain_conf.swapchain_format.colorSpace,
+            .imageExtent = (VkExtent2D){.width = extent.width, .height = extent.height},
+            .imageArrayLayers = 1,
+            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .preTransform = ctx->swapchain_conf.capabilities.currentTransform,
+            .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            .clipped = VK_FALSE,
+    };
+
+    ctx->swapchain_conf.swapchain_extent = extent;
+
+    VK_CHECKR(vkCreateSwapchainKHR(ctx->vk_device, &sc_ci, NULL, &ctx->swapchain.vk_swapchain), "Could not create swapchain.");
+    TRACE("Created swapchain successfully.");
+
+    vkGetSwapchainImagesKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, &ctx->swapchain.swapchain_image_count, NULL);
+    ctx->swapchain.swapchain_image_views = mem_allocate(sizeof(VkImageView) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
+    ctx->swapchain.swapchain_images = mem_allocate(sizeof(VkImage) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
+    vkGetSwapchainImagesKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, &ctx->swapchain.swapchain_image_count, ctx->swapchain.swapchain_images);
+    TRACE("Retrieved swapchain images.");
+
+    for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
+    {
+        VkImageViewCreateInfo view_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .image = ctx->swapchain.swapchain_images[i],
+                .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                .format = ctx->swapchain_conf.swapchain_format.format,
+                .components =
+                    {
+                                 .a = VK_COMPONENT_SWIZZLE_A,
+                                 .r = VK_COMPONENT_SWIZZLE_R,
+                                 .g = VK_COMPONENT_SWIZZLE_G,
+                                 .b = VK_COMPONENT_SWIZZLE_B,
+                                 },
+                .subresourceRange =
+                    {
+                                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                 .baseArrayLayer = 0,
+                                 .baseMipLevel = 0,
+                                 .layerCount = 1,
+                                 .levelCount = 1,
+                                 },
+        };
+
+        VK_CHECKR(vkCreateImageView(ctx->vk_device, &view_ci, NULL, &ctx->swapchain.swapchain_image_views[i]), "Could not create an image view.");
+    }
+    TRACE("Created swapchain image views.");
+    return TRUE;
+}
+
+b8 _vc_priv_delete_swapchain(vc_ctx *ctx)
+{
+    for(int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
+    {
+        vkDestroyImageView(ctx->vk_device, ctx->swapchain.swapchain_image_views[i], NULL);
+    }
+    vkDestroySwapchainKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, NULL);
+
+    mem_free(ctx->swapchain.swapchain_image_views);
+    mem_free(ctx->swapchain.swapchain_images);
+
+    return TRUE;
+}
+
 b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
 {
     // Select swapchain format
-    u32 format_count = 0;
+    u32                 format_count = 0;
     VkSurfaceFormatKHR *formats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, NULL);
     formats = mem_allocate(format_count * sizeof(VkSurfaceFormatKHR), MEMORY_TAG_RENDERER);
     vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, formats);
 
+    /* ---------------- Swapchain format ---------------- */
     ctx->swapchain_conf.swapchain_format = formats[0]; // Fallback
-    for(int i = 0; i < format_count; i++)
+    for (int i = 0; i < format_count; i++)
     {
-        if((formats[i].format == VK_FORMAT_R8G8B8A8_SRGB || formats[i].format == VK_FORMAT_R8G8B8A8_SNORM) && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if ((formats[i].format == VK_FORMAT_R8G8B8A8_SRGB || formats[i].format == VK_FORMAT_R8G8B8A8_SNORM) && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
             ctx->swapchain_conf.swapchain_format = formats[i];
         }
     }
     mem_free(formats);
 
-    // Select present mode
-
-    u32 present_mode_count = 0;
+    /* ---------------- Present mode ---------------- */
+    u32               present_mode_count = 0;
     VkPresentModeKHR *present_modes;
     vkGetPhysicalDeviceSurfacePresentModesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &present_mode_count, NULL);
     present_modes = mem_allocate(sizeof(VkPresentModeKHR) * present_mode_count, MEMORY_TAG_RENDERER);
     vkGetPhysicalDeviceSurfacePresentModesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &present_mode_count, present_modes);
 
     ctx->swapchain_conf.present_mode = VK_PRESENT_MODE_FIFO_KHR; // FIFO Is always available
-    for(int i = 0; i < present_mode_count; i++)
+    for (int i = 0; i < present_mode_count; i++)
     {
-        if(present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+        if (present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
         {
             ctx->swapchain_conf.present_mode = present_modes[i];
             INFO("Got mailbox present mode.");
@@ -318,35 +392,36 @@ b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
     VkSurfaceCapabilitiesKHR capa;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &capa);
 
+    /* ---------------- Image count ---------------- */
     ctx->swapchain_conf.image_count = capa.minImageCount + 1;
-    
-    if(capa.maxImageCount != 0) // If not infinite available images, cap
+
+    if (capa.maxImageCount != 0) // If not infinite available images, cap
     {
-        ctx->swapchain_conf.image_count= CLAMP(ctx->swapchain_conf.image_count, capa.minImageCount, capa.maxImageCount);
+        ctx->swapchain_conf.image_count = CLAMP(ctx->swapchain_conf.image_count, capa.minImageCount, capa.maxImageCount);
     }
     ctx->swapchain_conf.capabilities = capa;
 
     TRACE("Using %d swapchain images.", ctx->swapchain_conf.image_count);
 
-    // Depth buffer format
-    u32 candidates_count = 3;
+    /* ---------------- Depth buffer format ---------------- */
+    u32      candidates_count = 3;
     VkFormat depth_candidates[3] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
-    b8 found = FALSE;
-    for(int i = 0; i < candidates_count; i++)
+    b8       found = FALSE;
+    for (int i = 0; i < candidates_count; i++)
     {
         VkFormatProperties props = {0};
         vkGetPhysicalDeviceFormatProperties(ctx->vk_selected_physical_device, depth_candidates[i], &props);
 
-        if((props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        if ((props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
             ctx->swapchain_conf.depth_format = depth_candidates[i];
             found = TRUE;
         }
     }
 
-    if(!found)
+    if (!found)
     {
-        ERROR("No possible depth format found.");
+        WARN("No possible depth format found.");
     }
 
     TRACE("Depth format: %d", ctx->swapchain_conf.depth_format);
@@ -356,9 +431,9 @@ b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
 
 i32 _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
-    for(int i = 0; i < prop_count; i ++)
+    for (int i = 0; i < prop_count; i++)
     {
-        if(props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        if (props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
             return i;
         }
@@ -368,10 +443,10 @@ i32 _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
 
 i32 _vc_priv_search_dedicated_compute_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
-    //Searches a dedicated compute
-    for(int i = 0; i < prop_count; i ++)
+    // Searches a dedicated compute
+    for (int i = 0; i < prop_count; i++)
     {
-        if((props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && ((props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
+        if ((props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && ((props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
         {
             return i;
         }
@@ -382,10 +457,10 @@ i32 _vc_priv_search_dedicated_compute_queue(VkQueueFamilyProperties *props, u32 
 
 i32 _vc_priv_search_dedicated_transfer_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
-    //Searches a dedicated transfer queue
-    for(int i = 0; i < prop_count; i ++)
+    // Searches a dedicated transfer queue
+    for (int i = 0; i < prop_count; i++)
     {
-        if((props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && ((props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
+        if ((props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && ((props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
         {
             return i;
         }
@@ -404,21 +479,21 @@ i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhy
     i32 queue_id = -1;
     switch (type)
     {
-        case VC_QUEUE_MAIN:
-            queue_id = _vc_priv_search_main_queue(queue_properties, queue_family_count);
-            break;
+    case VC_QUEUE_MAIN:
+        queue_id = _vc_priv_search_main_queue(queue_properties, queue_family_count);
+        break;
 
-        case VC_QUEUE_COMPUTE:
-            queue_id = _vc_priv_search_dedicated_compute_queue(queue_properties, queue_family_count);
-            break;
-        
-        case VC_QUEUE_TRANSFER:
-            queue_id = _vc_priv_search_dedicated_transfer_queue(queue_properties, queue_family_count);
-            break;
+    case VC_QUEUE_COMPUTE:
+        queue_id = _vc_priv_search_dedicated_compute_queue(queue_properties, queue_family_count);
+        break;
 
-        default:
-            ERROR("Invalid vc_queue_type enum.");
-            break;
+    case VC_QUEUE_TRANSFER:
+        queue_id = _vc_priv_search_dedicated_transfer_queue(queue_properties, queue_family_count);
+        break;
+
+    default:
+        ERROR("Invalid vc_queue_type enum.");
+        break;
     }
 
     mem_free(queue_properties);
@@ -452,6 +527,39 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
     return TRUE;
 }
 
+b8 _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
+{
+    // Select extent
+    u32 width = 0;
+    u32 height = 0;
+    ctx->swapchain.framebuffer_size_fun(ctx->swapchain.windowing_user_data, &width, &height);
+
+    if (ctx->swapchain_conf.capabilities.maxImageExtent.width == U32_MAX)
+    {
+        extent->width = CLAMP(width, ctx->swapchain_conf.capabilities.minImageExtent.width, ctx->swapchain_conf.capabilities.maxImageExtent.width);
+        extent->height = CLAMP(height, ctx->swapchain_conf.capabilities.minImageExtent.height, ctx->swapchain_conf.capabilities.maxImageExtent.height);
+    }
+    else
+    {
+        *extent = ctx->swapchain_conf.capabilities.currentExtent;
+    }
+    return TRUE;
+}
+
+b8 vc_setup_default_swapchain(vc_ctx *ctx, vc_get_framebuffer_size_fun frambuffer_size_fun, void *user_data)
+{
+    INFO("Selecting swapchain configuration");
+
+    ctx->swapchain.windowing_user_data = user_data;
+    ctx->swapchain.framebuffer_size_fun = frambuffer_size_fun;
+
+    _vc_priv_select_swapchain_configuration(ctx);
+    VkExtent2D swp_extent;
+    _vc_priv_get_optimal_swapchain_size(ctx, &swp_extent);
+    _vc_priv_create_swapchain(ctx, swp_extent);
+    return TRUE;
+}
+
 b8 vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window)
 {
     VK_CHECKR(glfwCreateWindowSurface(ctx->vk_instance, window, NULL, &ctx->vk_window_surface), "Could not create GLFW window surface.");
@@ -461,6 +569,11 @@ b8 vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window)
 void vc_destroy_ctx(vc_ctx *ctx)
 {
     TRACE("Destroying vc context.");
+
+    if(ctx->swapchain.vk_swapchain)
+    {
+        _vc_priv_delete_swapchain(ctx);
+    }
 
     if (ctx->vk_device)
     {

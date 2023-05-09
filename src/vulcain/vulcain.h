@@ -40,6 +40,8 @@ typedef enum
     VC_QUEUE_TYPE_COUNT
 } vc_queue_type;
 
+typedef void (*vc_get_framebuffer_size_fun)(void *user_data, u32 *width, u32 *height);
+
 typedef struct
 {
     VkInstance               vk_instance;
@@ -59,11 +61,22 @@ typedef struct
     {
         VkSurfaceFormatKHR       swapchain_format;
         VkPresentModeKHR         present_mode;
-        VkExtent3D               swapchain_extent;
+        VkExtent2D               swapchain_extent;
         VkFormat                 depth_format;
         u32                      image_count;
         VkSurfaceCapabilitiesKHR capabilities;
     } swapchain_conf;
+
+    struct swapchain
+    {
+        VkSwapchainKHR vk_swapchain;
+        VkImage       *swapchain_images;
+        VkImageView   *swapchain_image_views;
+        u32            swapchain_image_count;
+
+        void *windowing_user_data;
+        vc_get_framebuffer_size_fun framebuffer_size_fun;
+    } swapchain;
 
 } vc_ctx;
 
@@ -92,6 +105,7 @@ typedef struct
 b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc);
 b8   vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window);
 b8   vc_select_create_device(vc_ctx *ctx, physical_device_query query);
+b8   vc_setup_default_swapchain(vc_ctx *ctx, vc_get_framebuffer_size_fun frambuffer_size_fun, void *user_data);
 void vc_destroy_ctx(vc_ctx *ctx);
 
 b8  _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
