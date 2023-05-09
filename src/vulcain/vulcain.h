@@ -3,6 +3,7 @@
 #include "../base/data_structures/darray.h"
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan_core.h>
 
 // clang-format on
 
@@ -26,6 +27,11 @@ typedef struct
     VkPhysicalDeviceFeatures requested_features;
 } physical_device_query;
 
+typedef struct
+{
+
+} swapchain_desc;
+
 typedef enum
 {
     VC_QUEUE_MAIN = 0, // Main queue, supporting graphics, present and compute, main work queue
@@ -48,6 +54,16 @@ typedef struct
         f32     priorities[VC_QUEUE_TYPE_COUNT];
         VkQueue queues[VC_QUEUE_TYPE_COUNT];
     } queues;
+
+    struct swapchain_conf
+    {
+        VkSurfaceFormatKHR       swapchain_format;
+        VkPresentModeKHR         present_mode;
+        VkExtent3D               swapchain_extent;
+        VkFormat                 depth_format;
+        u32                      image_count;
+        VkSurfaceCapabilitiesKHR capabilities;
+    } swapchain_conf;
 
 } vc_ctx;
 

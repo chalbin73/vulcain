@@ -277,6 +277,83 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
     return TRUE;
 }
 
+b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
+{
+    // Select swapchain format
+    u32 format_count = 0;
+    VkSurfaceFormatKHR *formats;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, NULL);
+    formats = mem_allocate(format_count * sizeof(VkSurfaceFormatKHR), MEMORY_TAG_RENDERER);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, formats);
+
+    ctx->swapchain_conf.swapchain_format = formats[0]; // Fallback
+    for(int i = 0; i < format_count; i++)
+    {
+        if((formats[i].format == VK_FORMAT_R8G8B8A8_SRGB || formats[i].format == VK_FORMAT_R8G8B8A8_SNORM) && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            ctx->swapchain_conf.swapchain_format = formats[i];
+        }
+    }
+    mem_free(formats);
+
+    // Select present mode
+
+    u32 present_mode_count = 0;
+    VkPresentModeKHR *present_modes;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &present_mode_count, NULL);
+    present_modes = mem_allocate(sizeof(VkPresentModeKHR) * present_mode_count, MEMORY_TAG_RENDERER);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &present_mode_count, present_modes);
+
+    ctx->swapchain_conf.present_mode = VK_PRESENT_MODE_FIFO_KHR; // FIFO Is always available
+    for(int i = 0; i < present_mode_count; i++)
+    {
+        if(present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            ctx->swapchain_conf.present_mode = present_modes[i];
+            INFO("Got mailbox present mode.");
+        }
+    }
+    mem_free(present_modes);
+
+    VkSurfaceCapabilitiesKHR capa;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &capa);
+
+    ctx->swapchain_conf.image_count = capa.minImageCount + 1;
+    
+    if(capa.maxImageCount != 0) // If not infinite available images, cap
+    {
+        ctx->swapchain_conf.image_count= CLAMP(ctx->swapchain_conf.image_count, capa.minImageCount, capa.maxImageCount);
+    }
+    ctx->swapchain_conf.capabilities = capa;
+
+    TRACE("Using %d swapchain images.", ctx->swapchain_conf.image_count);
+
+    // Depth buffer format
+    u32 candidates_count = 3;
+    VkFormat depth_candidates[3] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
+    b8 found = FALSE;
+    for(int i = 0; i < candidates_count; i++)
+    {
+        VkFormatProperties props = {0};
+        vkGetPhysicalDeviceFormatProperties(ctx->vk_selected_physical_device, depth_candidates[i], &props);
+
+        if((props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            ctx->swapchain_conf.depth_format = depth_candidates[i];
+            found = TRUE;
+        }
+    }
+
+    if(!found)
+    {
+        ERROR("No possible depth format found.");
+    }
+
+    TRACE("Depth format: %d", ctx->swapchain_conf.depth_format);
+
+    return TRUE;
+}
+
 i32 _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
     for(int i = 0; i < prop_count; i ++)
