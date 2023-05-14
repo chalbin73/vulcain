@@ -1,5 +1,4 @@
 #include "vc_managed_types.h"
-#include "vulcain.h"
 
 b8 _vc_priv_compute_pipe_destroy(vc_ctx *ctx, vc_priv_man_compute_pipe *pipe);
 

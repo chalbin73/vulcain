@@ -1,4 +1,5 @@
 #include "vc_handles.h"
+#include "vc_managed_types.h"
 
 b8 vc_handle_mgr_create(vc_handle_mgr *mgr, vc_handle_mgr_counts counts)
 {

@@ -38,10 +38,25 @@ int main(i32 argc, char **argv)
                                                             .binding_count = 0,
                                                             .bindings = NULL,
                                                         });
+ 
+    vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_COMPUTE);
 
+    (void)buf;
     (void)pipe;
     while (!glfwWindowShouldClose(window))
     {
+        vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
+        vc_command_buffer_reset(&ctx, buf);
+        vc_command_buffer_begin(&ctx, buf);
+
+        vc_command_buffer_compute_pipeline(&ctx, buf, &(compute_dispatch_desc){
+                                                          .pipe = pipe,
+                                                          .groups_x = 1,
+                                                          .groups_y = 1,
+                                                          .groups_z = 1,
+                                                      });
+
+        vc_command_buffer_end(&ctx, buf);
         glfwPollEvents();
     }
 

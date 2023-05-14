@@ -1,7 +1,8 @@
+#pragma once
+
 #include "../base/allocators/handle_allocator.h"
 #include "../base/base.h"
 #include "../base/data_structures/darray.h"
-#include "vc_managed_types.h"
 
 #define VC_DEF_HANDLE(handle_name) \
     typedef u64 handle_name;

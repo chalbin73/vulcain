@@ -1,10 +1,13 @@
+#include "vc_managed_types.h"
 #include "vulcain.h"
 
 static const char *const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
-b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx);
-b8 _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
-b8 _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
+b8  _vc_priv_setup_default_swapchain(vc_ctx *ctx);
+b8  _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
+b8  _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
+b8  _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 
 // All "boilerplate" objects : instance, device, queues, so on
 
@@ -629,6 +632,7 @@ b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx)
 
 void vc_destroy_ctx(vc_ctx *ctx)
 {
+    vkDeviceWaitIdle(ctx->vk_device);
     TRACE("Destroying vc context.");
 
     vc_handle_mgr_destroy(&ctx->handle_manager, ctx);
@@ -674,4 +678,83 @@ void vc_destroy_ctx(vc_ctx *ctx)
 void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
 {
     vc_handle_mgr_free(&ctx->handle_manager, hndl, ctx);
+}
+
+b8 _vc_priv_command_buffer_destroy(vc_ctx *ctx, vc_priv_man_command_buffer *buffer)
+{
+    vkFreeCommandBuffers(ctx->vk_device, buffer->pool, 1, &buffer->command_buffer);
+    return TRUE;
+}
+
+vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue)
+{
+    VkCommandBufferAllocateInfo alloc_ci =
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandBufferCount = 1,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandPool = ctx->queues.pools[queue],
+        };
+
+    vc_priv_man_command_buffer buf;
+    buf.queue_type = queue;
+    buf.pool = alloc_ci.commandPool;
+    VK_CHECKH(vkAllocateCommandBuffers(ctx->vk_device, &alloc_ci, &buf.command_buffer), "Could not allocate a command buffer in one of the main pools.");
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_COMMAND_BUFFER, (vc_man_destroy_func)_vc_priv_command_buffer_destroy);
+    return vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_COMMAND_BUFFER, &buf);
+}
+
+void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+
+    VkSubmitInfo submit_i =
+        {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &buf->command_buffer,
+            .signalSemaphoreCount = 0,
+            .waitSemaphoreCount = 0,
+        };
+
+    vkQueueSubmit(ctx->queues.queues[buf->queue_type], 1, &submit_i, VK_NULL_HANDLE);
+}
+
+void vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+
+    VkCommandBufferBeginInfo begin_i =
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        };
+
+    vkBeginCommandBuffer(buf->command_buffer, &begin_i);
+}
+
+void vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkEndCommandBuffer(buf->command_buffer);
+}
+
+void vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vc_priv_man_compute_pipe   *pipe = vc_handle_mgr_ptr(&ctx->handle_manager, desc->pipe);
+
+    vkCmdBindPipeline(buf->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipe->pipeline);
+    vkCmdDispatch(buf->command_buffer, desc->groups_x, desc->groups_y, desc->groups_z);
+}
+
+void vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkResetCommandBuffer(buf->command_buffer, 0);
+}
+
+void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)
+{
+    vkQueueWaitIdle(ctx->queues.queues[type]);
 }

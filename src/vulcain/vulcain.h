@@ -1,3 +1,5 @@
+#pragma once
+
 // clang-format off
 #include "../base/base.h"
 #include "../base/data_structures/darray.h"
@@ -52,6 +54,14 @@ typedef struct
     u32                binding_count;
     pipe_binding_desc *bindings;
 } compute_pipe_desc;
+
+typedef struct
+{
+    vc_compute_pipe pipe;
+    u32             groups_x;
+    u32             groups_y;
+    u32             groups_z;
+} compute_dispatch_desc;
 
 typedef struct
 {
@@ -130,10 +140,16 @@ typedef struct
 b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query);
 void vc_destroy_ctx(vc_ctx *ctx);
 
-b8  _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
-i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+// Destroys any kind of handle based on its destroy function
+void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
+
+void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type);
 
 vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
 
-// Destroys any kind of handle based on the destroy function
-void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
+vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue);
+void              vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer);
+void              vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer);
+void              vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
+void              vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
+void              vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
