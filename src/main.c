@@ -1,27 +1,19 @@
+#define VC_ENABLE_WINDOWING_GLFW 1
+
 #include "base/base.h"
 #include "vulcain/vulcain.h"
 #include <GLFW/glfw3.h>
 
 GLFWwindow *window;
 
-void glfw_frambuffer_size(GLFWwindow *window, u32 *width, u32 *height)
-{
-    i32 iwidth, iheight = 0;
-    glfwGetFramebufferSize(window, &iwidth, &iheight);
-
-    *width = iwidth;
-    *height = iheight;
-}
-
 int main(i32 argc, char **argv)
 {
     INFO("Hello, World ! Welcome to vulcain !");
-
+    
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     window = glfwCreateWindow(1920, 1080, "Hello !", NULL, NULL);
     glfwShowWindow(window);
-
     u32 exts_count = 0;
     const char **exts = glfwGetRequiredInstanceExtensions(&exts_count);
 
@@ -32,11 +24,11 @@ int main(i32 argc, char **argv)
         .engine_version = VK_MAKE_VERSION(0, 0, 0),
         .enable_debugging = TRUE,
         .extension_count = exts_count,
-        .extensions = (char **)exts
-    });
-    vc_get_surface_glfw(&ctx, window);
-
-    vc_select_create_device(&ctx, (physical_device_query)
+        .extensions = (char **)exts,
+        .enable_windowing = TRUE,
+        .windowing_system = vc_windowing_system_glfw(window),
+    },
+    &(physical_device_query)
     {
         .allowed_types = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU | VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
         .requested_features =
@@ -47,8 +39,6 @@ int main(i32 argc, char **argv)
         .request_compute_queue = TRUE,
         .request_transfer_queue = FALSE
     });
-    
-    vc_setup_default_swapchain(&ctx, (vc_get_framebuffer_size_fun)glfw_frambuffer_size, window);
 
     while(!glfwWindowShouldClose(window))
     {

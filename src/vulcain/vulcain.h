@@ -4,18 +4,22 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
+#include "windowing_systems/vc_windowing_systems.h"
+#include "vc_handles.h"
 
 // clang-format on
 
 typedef struct
 {
-    char  *engine_name;
-    char  *app_name;
-    u32    app_version;
-    u32    engine_version;
-    b8     enable_debugging;
-    u32    extension_count;
-    char **extensions;
+    char                     *engine_name;
+    char                     *app_name;
+    u32                       app_version;
+    u32                       engine_version;
+    b8                        enable_debugging;
+    u32                       extension_count;
+    char                    **extensions;
+    b8                        enable_windowing;
+    vc_windowing_system_funcs windowing_system;
 } instance_desc;
 
 typedef struct
@@ -27,11 +31,6 @@ typedef struct
     VkPhysicalDeviceFeatures requested_features;
 } physical_device_query;
 
-typedef struct
-{
-
-} swapchain_desc;
-
 typedef enum
 {
     VC_QUEUE_MAIN = 0, // Main queue, supporting graphics, present and compute, main work queue
@@ -40,21 +39,37 @@ typedef enum
     VC_QUEUE_TYPE_COUNT
 } vc_queue_type;
 
-typedef void (*vc_get_framebuffer_size_fun)(void *user_data, u32 *width, u32 *height);
+typedef struct
+{
+    u32                binding;
+    VkDescriptorType   type;
+    VkShaderStageFlags stage;
+} pipe_binding_desc;
 
 typedef struct
 {
-    VkInstance               vk_instance;
-    VkDebugUtilsMessengerEXT vk_debug_messenger;
-    VkSurfaceKHR             vk_window_surface;
-    VkPhysicalDevice         vk_selected_physical_device;
-    VkDevice                 vk_device;
+    u8                *shader_code;
+    u32                shader_code_length;
+    u32                binding_count;
+    pipe_binding_desc *bindings;
+} compute_pipe_desc;
+
+typedef struct
+{
+    VkInstance                vk_instance;
+    VkDebugUtilsMessengerEXT  vk_debug_messenger;
+    VkSurfaceKHR              vk_window_surface;
+    VkPhysicalDevice          vk_selected_physical_device;
+    VkDevice                  vk_device;
+    b8                        use_windowing;
+    vc_windowing_system_funcs windowing_system;
 
     struct queues
     {
-        u32     indices[VC_QUEUE_TYPE_COUNT];
-        f32     priorities[VC_QUEUE_TYPE_COUNT];
-        VkQueue queues[VC_QUEUE_TYPE_COUNT];
+        u32           indices[VC_QUEUE_TYPE_COUNT];
+        f32           priorities[VC_QUEUE_TYPE_COUNT];
+        VkQueue       queues[VC_QUEUE_TYPE_COUNT];
+        VkCommandPool pools[VC_QUEUE_TYPE_COUNT];
     } queues;
 
     struct swapchain_conf
@@ -73,9 +88,6 @@ typedef struct
         VkImage       *swapchain_images;
         VkImageView   *swapchain_image_views;
         u32            swapchain_image_count;
-
-        void *windowing_user_data;
-        vc_get_framebuffer_size_fun framebuffer_size_fun;
     } swapchain;
 
 } vc_ctx;
@@ -101,12 +113,24 @@ typedef struct
         }                                                                        \
     }                                                                            \
     while (0);
+#define VK_CHECKH(s, m)                                                          \
+    do                                                                           \
+    {                                                                            \
+        VkResult _res = s;                                                       \
+        if (_res != VK_SUCCESS)                                                  \
+        {                                                                        \
+            ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); \
+            return VC_NULL_HANDLE;                                               \
+        }                                                                        \
+    }                                                                            \
+    while (0);
 
-b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc);
-b8   vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window);
+b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query);
 b8   vc_select_create_device(vc_ctx *ctx, physical_device_query query);
-b8   vc_setup_default_swapchain(vc_ctx *ctx, vc_get_framebuffer_size_fun frambuffer_size_fun, void *user_data);
 void vc_destroy_ctx(vc_ctx *ctx);
 
 b8  _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+
+vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
+void            vc_compute_pipe_destroy(vc_ctx *ctx, vc_compute_pipe pipe);

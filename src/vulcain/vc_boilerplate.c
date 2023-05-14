@@ -2,6 +2,10 @@
 
 static const char *const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
+b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx);
+b8 _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
+b8 _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
+
 // All "boilerplate" objects : instance, device, queues, so on
 
 static VkResult vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger)
@@ -50,10 +54,34 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
     return VK_FALSE;
 }
 
-b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
+b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
-    ctx->vk_window_surface = VK_NULL_HANDLE;
+    if(!_vc_priv_setup_instance(ctx, desc))
+    {
+        FATAL("Could not setup vkInstance, aborting.");
+        return FALSE;
+    }
 
+    ctx->vk_window_surface = VK_NULL_HANDLE;
+    ctx->use_windowing = desc->enable_windowing;
+    ctx->windowing_system = desc->windowing_system;
+
+    if (ctx->use_windowing)
+    {
+        VK_CHECKR(ctx->windowing_system.get_window_surface_fun(ctx->windowing_system.windowing_ctx, ctx->vk_instance, &ctx->vk_window_surface), "Could not create window surface.");
+    }
+
+    if(!_vc_priv_select_create_device(ctx, *phys_device_query))
+    {
+        FATAL("Could not setup device, queues, command pools or swapchain, aborting.");
+        return FALSE;
+    }
+    INFO("Vulcain instance setup.");
+    return TRUE;
+}
+
+b8 _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
+{
     // Create instance
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app_info.pApplicationName = desc->app_name;
@@ -158,7 +186,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc)
     return TRUE;
 }
 
-b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
+b8 _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
 {
     // Search suitable physical devices
     u32 physical_device_count = 0;
@@ -260,19 +288,49 @@ b8 vc_select_create_device(vc_ctx *ctx, physical_device_query query)
     if (query.request_main_queue)
     {
         vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_MAIN], 0, &ctx->queues.queues[VC_QUEUE_MAIN]);
+
+        VkCommandPoolCreateInfo pool_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = ctx->queues.indices[VC_QUEUE_MAIN]};
+
+        VK_CHECKR(vkCreateCommandPool(ctx->vk_device, &pool_ci, NULL, &ctx->queues.pools[VC_QUEUE_MAIN]), "Could not create command pool.");
     }
 
     if (query.request_compute_queue)
     {
         vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_COMPUTE], 0, &ctx->queues.queues[VC_QUEUE_COMPUTE]);
+
+        VkCommandPoolCreateInfo pool_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = ctx->queues.indices[VC_QUEUE_COMPUTE]};
+
+        VK_CHECKR(vkCreateCommandPool(ctx->vk_device, &pool_ci, NULL, &ctx->queues.pools[VC_QUEUE_COMPUTE]), "Could not create command pool.");
     }
 
     if (query.request_transfer_queue)
     {
         vkGetDeviceQueue(ctx->vk_device, ctx->queues.indices[VC_QUEUE_TRANSFER], 0, &ctx->queues.queues[VC_QUEUE_TRANSFER]);
+
+        VkCommandPoolCreateInfo pool_ci =
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = ctx->queues.indices[VC_QUEUE_TRANSFER]};
+
+        VK_CHECKR(vkCreateCommandPool(ctx->vk_device, &pool_ci, NULL, &ctx->queues.pools[VC_QUEUE_TRANSFER]), "Could not create command pool.");
     }
 
     TRACE("Retrieved queues.");
+
+    if (ctx->use_windowing)
+    {
+        INFO("Using windowing, creating swapchain.");
+        _vc_priv_setup_default_swapchain(ctx);
+    }
 
     return TRUE;
 }
@@ -339,7 +397,7 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
 
 b8 _vc_priv_delete_swapchain(vc_ctx *ctx)
 {
-    for(int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
+    for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
         vkDestroyImageView(ctx->vk_device, ctx->swapchain.swapchain_image_views[i], NULL);
     }
@@ -532,7 +590,7 @@ b8 _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
     // Select extent
     u32 width = 0;
     u32 height = 0;
-    ctx->swapchain.framebuffer_size_fun(ctx->swapchain.windowing_user_data, &width, &height);
+    ctx->windowing_system.get_framebuffer_size_fun(ctx->windowing_system.windowing_ctx, &width, &height);
 
     if (ctx->swapchain_conf.capabilities.maxImageExtent.width == U32_MAX)
     {
@@ -546,12 +604,14 @@ b8 _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
     return TRUE;
 }
 
-b8 vc_setup_default_swapchain(vc_ctx *ctx, vc_get_framebuffer_size_fun frambuffer_size_fun, void *user_data)
+b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx)
 {
+    if (!ctx->use_windowing)
+    {
+        FATAL("Cannot setup a swapchain without a windowing system.");
+        return FALSE;
+    }
     INFO("Selecting swapchain configuration");
-
-    ctx->swapchain.windowing_user_data = user_data;
-    ctx->swapchain.framebuffer_size_fun = frambuffer_size_fun;
 
     _vc_priv_select_swapchain_configuration(ctx);
     VkExtent2D swp_extent;
@@ -560,23 +620,32 @@ b8 vc_setup_default_swapchain(vc_ctx *ctx, vc_get_framebuffer_size_fun frambuffe
     return TRUE;
 }
 
-b8 vc_get_surface_glfw(vc_ctx *ctx, GLFWwindow *window)
-{
-    VK_CHECKR(glfwCreateWindowSurface(ctx->vk_instance, window, NULL, &ctx->vk_window_surface), "Could not create GLFW window surface.");
-    return TRUE;
-}
-
 void vc_destroy_ctx(vc_ctx *ctx)
 {
     TRACE("Destroying vc context.");
 
-    if(ctx->swapchain.vk_swapchain)
+    if (ctx->swapchain.vk_swapchain)
     {
         _vc_priv_delete_swapchain(ctx);
     }
 
     if (ctx->vk_device)
     {
+        if (ctx->queues.pools[VC_QUEUE_MAIN])
+        {
+            vkDestroyCommandPool(ctx->vk_device, ctx->queues.pools[VC_QUEUE_MAIN], NULL);
+        }
+
+        if (ctx->queues.pools[VC_QUEUE_COMPUTE])
+        {
+            vkDestroyCommandPool(ctx->vk_device, ctx->queues.pools[VC_QUEUE_COMPUTE], NULL);
+        }
+
+        if (ctx->queues.pools[VC_QUEUE_TRANSFER])
+        {
+            vkDestroyCommandPool(ctx->vk_device, ctx->queues.pools[VC_QUEUE_TRANSFER], NULL);
+        }
+
         vkDestroyDevice(ctx->vk_device, NULL);
     }
 

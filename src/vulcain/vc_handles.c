@@ -24,22 +24,23 @@ vc_handle vc_handle_mgr_alloc(vc_handle_mgr *mgr, vc_handle_type type)
     
     if(hndl)
     {
-        vc_handle vc_hndl =
+        vc_handle_unpack vc_hndl =
         {
             .type = type,
             .hndl = hndl
         };
-        return vc_hndl;
+        return vc_hndl.packed;
     }
     return VC_NULL_HANDLE;
 }
 
 b8 vc_handle_mgr_free(vc_handle_mgr *mgr, vc_handle hndl)
 {   
-    ASSERT_MSG(hndl.value, "Invalid handle provided.");
-    ASSERT_MSG(hndl.type < VC_HANDLE_TYPE_COUNT, "Invalide handle type provided.");
+    vc_handle_unpack unpacked = {.packed = hndl};
+    ASSERT_MSG(unpacked.packed, "Invalid handle provided.");
+    ASSERT_MSG(unpacked.type < VC_HANDLE_TYPE_COUNT, "Invalide handle type provided.");
 
-    return handle_mgr_free(&mgr->handle_managers[hndl.type], hndl.hndl);
+    return handle_mgr_free(&mgr->handle_managers[unpacked.type], unpacked.hndl);
 }
 
 void vc_destroy_handle_mgr(vc_handle_mgr *mgr)
