@@ -56,7 +56,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
 
 b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
-    if(!_vc_priv_setup_instance(ctx, desc))
+    if (!_vc_priv_setup_instance(ctx, desc))
     {
         FATAL("Could not setup vkInstance, aborting.");
         return FALSE;
@@ -71,12 +71,19 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
         VK_CHECKR(ctx->windowing_system.get_window_surface_fun(ctx->windowing_system.windowing_ctx, ctx->vk_instance, &ctx->vk_window_surface), "Could not create window surface.");
     }
 
-    if(!_vc_priv_select_create_device(ctx, *phys_device_query))
+    if (!_vc_priv_select_create_device(ctx, *phys_device_query))
     {
         FATAL("Could not setup device, queues, command pools or swapchain, aborting.");
         return FALSE;
     }
     INFO("Vulcain instance setup.");
+
+    // TODO: Make this configurable
+    vc_handle_mgr_create(&ctx->handle_manager, (vc_handle_mgr_counts){
+                                                   [VC_HANDLE_COMPUTE_PIPE] = 64,
+                                                   [VC_HANDLE_COMMAND_BUFFER] = 16,
+                                               });
+
     return TRUE;
 }
 
@@ -624,6 +631,8 @@ void vc_destroy_ctx(vc_ctx *ctx)
 {
     TRACE("Destroying vc context.");
 
+    vc_handle_mgr_destroy(&ctx->handle_manager, ctx);
+
     if (ctx->swapchain.vk_swapchain)
     {
         _vc_priv_delete_swapchain(ctx);
@@ -660,4 +669,9 @@ void vc_destroy_ctx(vc_ctx *ctx)
     }
 
     vkDestroyInstance(ctx->vk_instance, NULL);
+}
+
+void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
+{
+    vc_handle_mgr_free(&ctx->handle_manager, hndl, ctx);
 }

@@ -8,7 +8,6 @@
 #include "vc_handles.h"
 
 // clang-format on
-
 typedef struct
 {
     char                     *engine_name;
@@ -63,6 +62,7 @@ typedef struct
     VkDevice                  vk_device;
     b8                        use_windowing;
     vc_windowing_system_funcs windowing_system;
+    vc_handle_mgr             handle_manager;
 
     struct queues
     {
@@ -102,6 +102,7 @@ typedef struct
         }                                                                        \
     }                                                                            \
     while (0);
+
 #define VK_CHECKR(s, m)                                                          \
     do                                                                           \
     {                                                                            \
@@ -113,6 +114,7 @@ typedef struct
         }                                                                        \
     }                                                                            \
     while (0);
+
 #define VK_CHECKH(s, m)                                                          \
     do                                                                           \
     {                                                                            \
@@ -126,11 +128,12 @@ typedef struct
     while (0);
 
 b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query);
-b8   vc_select_create_device(vc_ctx *ctx, physical_device_query query);
 void vc_destroy_ctx(vc_ctx *ctx);
 
 b8  _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 
 vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
-void            vc_compute_pipe_destroy(vc_ctx *ctx, vc_compute_pipe pipe);
+
+// Destroys any kind of handle based on the destroy function
+void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
