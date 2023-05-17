@@ -1,3 +1,4 @@
+#include "base/fio.h"
 #define VC_ENABLE_WINDOWING_GLFW 1
 
 #include "base/base.h"
@@ -38,7 +39,7 @@ int main(i32 argc, char **argv)
                                                             .binding_count = 0,
                                                             .bindings = NULL,
                                                         });
- 
+
     vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_COMPUTE);
 
     (void)buf;
