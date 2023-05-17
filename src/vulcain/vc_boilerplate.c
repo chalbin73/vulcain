@@ -1,5 +1,7 @@
+#include "vc_handles.h"
 #include "vc_managed_types.h"
 #include "vulcain.h"
+#include <vulkan/vulkan_core.h>
 
 static const char *const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
@@ -85,6 +87,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
     vc_handle_mgr_create(&ctx->handle_manager, (vc_handle_mgr_counts){
                                                    [VC_HANDLE_COMPUTE_PIPE] = 64,
                                                    [VC_HANDLE_COMMAND_BUFFER] = 16,
+                                                   [VC_HANDLE_SEMAPHORE] = 32,
                                                });
 
     return TRUE;
@@ -757,4 +760,10 @@ void vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer)
 void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)
 {
     vkQueueWaitIdle(ctx->queues.queues[type]);
+}
+
+void vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
+{
+    vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore);
+    vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, sem->semaphore, VK_NULL_HANDLE, image_id);
 }

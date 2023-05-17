@@ -16,3 +16,8 @@ typedef struct
     VkCommandPool   pool;
     vc_queue_type   queue_type;
 } vc_priv_man_command_buffer;
+
+typedef struct
+{
+    VkSemaphore semaphore;
+} vc_priv_man_semaphore;

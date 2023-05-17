@@ -1,3 +1,4 @@
+#include "vulcain/vc_handles.h"
 #define VC_ENABLE_WINDOWING_GLFW 1
 
 #include "base/base.h"
@@ -41,11 +42,17 @@ int main(i32 argc, char **argv)
  
     vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_COMPUTE);
 
+    vc_semaphore sem = vc_semaphore_create(&ctx);
+    (void) sem;
+
     (void)buf;
     (void)pipe;
     while (!glfwWindowShouldClose(window))
     {
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
+        u32 iid = 0;
+        vc_swapchain_acquire_image(&ctx, &iid, sem);
+
         vc_command_buffer_reset(&ctx, buf);
         vc_command_buffer_begin(&ctx, buf);
 
