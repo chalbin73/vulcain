@@ -153,3 +153,7 @@ void              vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command
 void              vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
+
+vc_semaphore vc_semaphore_create(vc_ctx *ctx);
+
+void vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore);
