@@ -8,6 +8,7 @@ b8 vc_handle_mgr_create(vc_handle_mgr *mgr, vc_handle_mgr_counts counts)
             [VC_HANDLE_COMPUTE_PIPE] = sizeof(vc_priv_man_compute_pipe),
             [VC_HANDLE_COMMAND_BUFFER] = sizeof(vc_priv_man_command_buffer),
             [VC_HANDLE_SEMAPHORE] = sizeof(vc_priv_man_semaphore),
+            [VC_HANDLE_IMAGE] = sizeof(vc_priv_man_image),
         };
 
     mem_memcpy(mgr->sizes, (void *)managed_sizes, sizeof(vc_handle_mgr_counts));
@@ -41,6 +42,7 @@ vc_handle vc_handle_mgr_alloc(vc_handle_mgr *mgr, vc_handle_type type)
         darray_push(mgr->destroy_queue, vc_hndl);
         return vc_hndl.packed;
     }
+    WARN("Null handle acquired, type='%d'", type);
     return VC_NULL_HANDLE;
 }
 

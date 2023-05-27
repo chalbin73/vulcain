@@ -61,6 +61,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
 
 b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
+    // TODO: Make this configurable
+    vc_handle_mgr_create(&ctx->handle_manager,
+                         (vc_handle_mgr_counts){
+                             [VC_HANDLE_COMPUTE_PIPE] = 64,
+                             [VC_HANDLE_COMMAND_BUFFER] = 16,
+                             [VC_HANDLE_SEMAPHORE] = 32,
+                             [VC_HANDLE_IMAGE] = 64,
+                         });
+    
     if (!_vc_priv_setup_instance(ctx, desc))
     {
         FATAL("Could not setup vkInstance, aborting.");
@@ -83,12 +92,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
     }
     INFO("Vulcain instance setup.");
 
-    // TODO: Make this configurable
-    vc_handle_mgr_create(&ctx->handle_manager, (vc_handle_mgr_counts){
-                                                   [VC_HANDLE_COMPUTE_PIPE] = 64,
-                                                   [VC_HANDLE_COMMAND_BUFFER] = 16,
-                                                   [VC_HANDLE_SEMAPHORE] = 32,
-                                               });
+
 
     return TRUE;
 }
@@ -374,9 +378,13 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
     vkGetSwapchainImagesKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, &ctx->swapchain.swapchain_image_count, NULL);
     ctx->swapchain.swapchain_image_views = mem_allocate(sizeof(VkImageView) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
     ctx->swapchain.swapchain_images = mem_allocate(sizeof(VkImage) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
+    ctx->swapchain.swapchain_image_hndls = mem_allocate(sizeof(vc_image) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
     vkGetSwapchainImagesKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, &ctx->swapchain.swapchain_image_count, ctx->swapchain.swapchain_images);
     TRACE("Retrieved swapchain images.");
 
+    vc_command_buffer cmd_buf = vc_command_buffer_main_create(ctx, VC_QUEUE_MAIN);
+    vc_command_buffer_begin(ctx, cmd_buf);
+    
     for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
         VkImageViewCreateInfo view_ci =
@@ -403,7 +411,27 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
         };
 
         VK_CHECKR(vkCreateImageView(ctx->vk_device, &view_ci, NULL, &ctx->swapchain.swapchain_image_views[i]), "Could not create an image view.");
+
+        vc_priv_man_image img = 
+        {
+            .external = TRUE,
+            .image = ctx->swapchain.swapchain_images[i],
+        };
+        ctx->swapchain.swapchain_image_hndls[i] = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE, &img);
+
+	vc_cmd_image_pipe_barrier(ctx, cmd_buf, ctx->swapchain.swapchain_image_hndls[i],
+				  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				  VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+				  VC_QUEUE_MAIN, VC_QUEUE_MAIN);
     }
+
+    vc_command_buffer_end(ctx, cmd_buf);
+    vc_command_buffer_submit(ctx, cmd_buf, VC_NULL_HANDLE, 0);
+    vc_queue_wait_idle(ctx, VC_QUEUE_MAIN);
+    vc_handle_destroy(ctx, cmd_buf);
+    
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, NULL); //TODO: Image destruction
     TRACE("Created swapchain image views.");
     return TRUE;
 }
@@ -414,10 +442,12 @@ b8 _vc_priv_delete_swapchain(vc_ctx *ctx)
     {
         vkDestroyImageView(ctx->vk_device, ctx->swapchain.swapchain_image_views[i], NULL);
     }
+
     vkDestroySwapchainKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, NULL);
 
     mem_free(ctx->swapchain.swapchain_image_views);
     mem_free(ctx->swapchain.swapchain_images);
+    mem_free(ctx->swapchain.swapchain_image_hndls);
 
     return TRUE;
 }
@@ -633,6 +663,11 @@ b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx)
     return TRUE;
 }
 
+vc_image *vc_swapchain_get_image_hndls(vc_ctx *ctx)
+{
+    return ctx->swapchain.swapchain_image_hndls;
+}
+
 void vc_destroy_ctx(vc_ctx *ctx)
 {
     vkDeviceWaitIdle(ctx->vk_device);
@@ -707,8 +742,15 @@ vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue
     return vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_COMMAND_BUFFER, &buf);
 }
 
-void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer)
+void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_stages)
 {
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+
+    if(wait_on_semaphore != VC_NULL_HANDLE)
+    {
+	vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, wait_on_semaphore);
+	semaphore = sem->semaphore;
+    }
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
 
     VkSubmitInfo submit_i =
@@ -717,7 +759,9 @@ void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer)
             .commandBufferCount = 1,
             .pCommandBuffers = &buf->command_buffer,
             .signalSemaphoreCount = 0,
-            .waitSemaphoreCount = 0,
+            .waitSemaphoreCount = (wait_on_semaphore == VC_NULL_HANDLE) ? 0 : 1,
+            .pWaitSemaphores = &semaphore,
+            .pWaitDstStageMask = wait_stages,
         };
 
     vkQueueSubmit(ctx->queues.queues[buf->queue_type], 1, &submit_i, VK_NULL_HANDLE);
@@ -766,4 +810,17 @@ void vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquire
 {
     vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore);
     vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, sem->semaphore, VK_NULL_HANDLE, image_id);
+}
+
+void vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
+{
+    vkQueuePresentKHR(ctx->queues.queues[VC_QUEUE_MAIN], &(VkPresentInfoKHR)
+            {
+                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .pImageIndices = &image_id,
+                .pSwapchains = &ctx->swapchain.vk_swapchain,
+                .swapchainCount = 1,
+                .waitSemaphoreCount = 0,
+
+            });
 }

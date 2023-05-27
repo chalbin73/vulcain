@@ -21,3 +21,9 @@ typedef struct
 {
     VkSemaphore semaphore;
 } vc_priv_man_semaphore;
+
+typedef struct
+{
+    b8 external; // Wether or not the image is managed by an external system (e.g. swapchain)
+    VkImage image;
+} vc_priv_man_image;
