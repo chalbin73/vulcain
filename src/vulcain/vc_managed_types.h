@@ -24,6 +24,11 @@ typedef struct
 
 typedef struct
 {
-    b8 external; // Wether or not the image is managed by an external system (e.g. swapchain)
+    b8      external; // Wether or not the image is managed by an external system (e.g. swapchain)
     VkImage image;
 } vc_priv_man_image;
+
+typedef struct
+{
+    VkDescriptorSetLayout set_layout;
+} vc_priv_man_descriptor_set_layout;

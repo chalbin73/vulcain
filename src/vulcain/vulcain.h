@@ -145,14 +145,12 @@ void vc_destroy_ctx(vc_ctx *ctx);
 // Destroys any kind of handle based on its destroy function
 void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 
-
 void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type);
-
 
 vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
 
 vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue);
-void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_stages);
+void              vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_stages);
 void              vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
@@ -160,12 +158,14 @@ void              vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buf
 
 vc_semaphore vc_semaphore_create(vc_ctx *ctx);
 
-void vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore);
-void vc_swapchain_present_image(vc_ctx *ctx, u32 image_id);
+void      vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore);
+void      vc_swapchain_present_image(vc_ctx *ctx, u32 image_id);
 vc_image *vc_swapchain_get_image_hndls(vc_ctx *ctx);
 
+vc_descriptor_set_layout vc_descriptor_set_layout_create(vc_ctx *ctx);
+
 void vc_cmd_image_pipe_barrier(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image image,
-        VkImageLayout src_layout, VkImageLayout dst_layout,
-        VkPipelineStageFlags from, VkPipelineStageFlags to,
-        VkAccessFlags src_access, VkAccessFlags dst_access,
-        vc_queue_type src_queue, vc_queue_type dst_queue);
+                               VkImageLayout src_layout, VkImageLayout dst_layout,
+                               VkPipelineStageFlags from, VkPipelineStageFlags to,
+                               VkAccessFlags src_access, VkAccessFlags dst_access,
+                               vc_queue_type src_queue, vc_queue_type dst_queue);

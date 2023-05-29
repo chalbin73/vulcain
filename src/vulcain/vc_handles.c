@@ -9,6 +9,7 @@ b8 vc_handle_mgr_create(vc_handle_mgr *mgr, vc_handle_mgr_counts counts)
             [VC_HANDLE_COMMAND_BUFFER] = sizeof(vc_priv_man_command_buffer),
             [VC_HANDLE_SEMAPHORE] = sizeof(vc_priv_man_semaphore),
             [VC_HANDLE_IMAGE] = sizeof(vc_priv_man_image),
+            [VK_HANDLE_DESCRIPTOR_SET_LAYOUT] = sizeof(vc_priv_man_descriptor_set_layout),
         };
 
     mem_memcpy(mgr->sizes, (void *)managed_sizes, sizeof(vc_handle_mgr_counts));

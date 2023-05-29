@@ -14,6 +14,7 @@ typedef enum
     VC_HANDLE_COMMAND_BUFFER,
     VC_HANDLE_SEMAPHORE,
     VC_HANDLE_IMAGE,
+    VK_HANDLE_DESCRIPTOR_SET_LAYOUT,
     VC_HANDLE_TYPE_COUNT
 } vc_handle_type;
 
@@ -23,6 +24,7 @@ VC_DEF_HANDLE(vc_compute_pipe);
 VC_DEF_HANDLE(vc_semaphore);
 VC_DEF_HANDLE(vc_command_buffer);
 VC_DEF_HANDLE(vc_image);
+VC_DEF_HANDLE(vc_descriptor_set_layout);
 
 typedef union
 {
