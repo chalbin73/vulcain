@@ -50,6 +50,12 @@ typedef struct
     VkShaderStageFlags stage;
 } pipe_binding_desc;
 
+typedef enum
+{
+    VC_PIPELINE_TYPE_COMPUTE = 1,
+    VC_PIPELINE_TYPE_GRAPHICS,
+} pipeline_type;
+
 typedef struct
 {
     u8                      *shader_code;
@@ -68,12 +74,17 @@ typedef struct
 typedef enum
 {
     VC_MEMORY_HOST_VISIBLE = 0,
-    VC_MEMORY_DEVICE_LOCAL
-} memory_visibility_enum;
+    VC_MEMORY_DEVICE_LOCAL_HOST_VISIBLE,
+    VC_MEMORY_DEVICE_LOCAL_NOT_VISIBLE,
+} memory_visibility;
 
 typedef struct
 {
-    memory_visibility_enum memory_visibility;
+    // TODO: Make this better such that we can select device local, not host visible memeory (for more optimization)
+    b8                    require_host_visible;
+    b8                    require_device_local;
+    VkBufferUsageFlagBits buffer_usage;
+    u64                   size;
 } buffer_alloc_desc;
 
 /* ---------------- Descriptors ---------------- */
@@ -81,9 +92,11 @@ typedef struct
 // For now those are the same as VkDescriptorBufferInfo, VkDescriptorImageInfo
 typedef struct
 {
-    VkBuffer     buffer;
-    VkDeviceSize offset;
-    VkDeviceSize range;
+    vc_buffer buffer;
+    b8        whole_buffer;
+    // Useless if whole_buffer is true
+    u64 offset;
+    u64 range;
 } descriptor_binding_buffer;
 
 typedef struct
@@ -99,8 +112,8 @@ typedef struct
     uint32_t           descriptor_count;
     VkShaderStageFlags stage_flags;
 
-    descriptor_binding_buffer buffer_info;
-    descriptor_binding_image  image_info;
+    descriptor_binding_buffer *buffer_info;
+    descriptor_binding_image  *image_info;
 } descriptor_binding_desc;
 
 typedef struct
@@ -152,39 +165,42 @@ typedef struct
 
 } vc_ctx;
 
-#define VK_CHECK(s, m)                                                           \
-    do                                                                           \
-    {                                                                            \
-        VkResult _res = s;                                                       \
-        if (_res != VK_SUCCESS)                                                  \
-        {                                                                        \
-            ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); \
-        }                                                                        \
-    }                                                                            \
+/* ---------------- Enum helpers ---------------- */
+const char *vc_priv_VkResult_to_str(VkResult input_value);
+
+#define VK_CHECK(s, m)                                                                                               \
+    do                                                                                                               \
+    {                                                                                                                \
+        VkResult _res = s;                                                                                           \
+        if (_res != VK_SUCCESS)                                                                                      \
+        {                                                                                                            \
+            ERROR("VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res)); \
+        }                                                                                                            \
+    }                                                                                                                \
     while (0);
 
-#define VK_CHECKR(s, m)                                                          \
-    do                                                                           \
-    {                                                                            \
-        VkResult _res = s;                                                       \
-        if (_res != VK_SUCCESS)                                                  \
-        {                                                                        \
-            ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); \
-            return FALSE;                                                        \
-        }                                                                        \
-    }                                                                            \
+#define VK_CHECKR(s, m)                                                                                              \
+    do                                                                                                               \
+    {                                                                                                                \
+        VkResult _res = s;                                                                                           \
+        if (_res != VK_SUCCESS)                                                                                      \
+        {                                                                                                            \
+            ERROR("VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res)); \
+            return FALSE;                                                                                            \
+        }                                                                                                            \
+    }                                                                                                                \
     while (0);
 
-#define VK_CHECKH(s, m)                                                          \
-    do                                                                           \
-    {                                                                            \
-        VkResult _res = s;                                                       \
-        if (_res != VK_SUCCESS)                                                  \
-        {                                                                        \
-            ERROR("VKERROR: '%s' %s:%d error=%d.", m, __FILE__, __LINE__, _res); \
-            return VC_NULL_HANDLE;                                               \
-        }                                                                        \
-    }                                                                            \
+#define VK_CHECKH(s, m)                                                                                              \
+    do                                                                                                               \
+    {                                                                                                                \
+        VkResult _res = s;                                                                                           \
+        if (_res != VK_SUCCESS)                                                                                      \
+        {                                                                                                            \
+            ERROR("VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res)); \
+            return VC_NULL_HANDLE;                                                                                   \
+        }                                                                                                            \
+    }                                                                                                                \
     while (0);
 
 /* ---------------- ContextS ---------------- */
@@ -213,6 +229,7 @@ void              vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command
 void              vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
+void              vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set);
 
 /* ---------------- Synchronisation ---------------- */
 
@@ -231,12 +248,15 @@ vc_descriptor_set        vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_de
 
 /* ---------------- Pipelines ---------------- */
 
-void vc_cmd_image_pipe_barrier(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image image,
-                               VkImageLayout src_layout, VkImageLayout dst_layout,
-                               VkPipelineStageFlags from, VkPipelineStageFlags to,
-                               VkAccessFlags src_access, VkAccessFlags dst_access,
-                               vc_queue_type src_queue, vc_queue_type dst_queue);
+void vc_command_image_pipe_barrier(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image image,
+                                   VkImageLayout src_layout, VkImageLayout dst_layout,
+                                   VkPipelineStageFlags from, VkPipelineStageFlags to,
+                                   VkAccessFlags src_access, VkAccessFlags dst_access,
+                                   vc_queue_type src_queue, vc_queue_type dst_queue);
 
 vc_descriptor_set_layout vc_priv_desc_set_layout_get(vc_ctx *ctx, VkDescriptorSetLayoutCreateInfo *ci);
 
 /* ---------------- Buffers ---------------- */
+vc_buffer vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc);
+
+/* ---------------- Utils ---------------- */

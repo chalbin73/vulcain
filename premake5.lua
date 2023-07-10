@@ -10,6 +10,6 @@ buildoptions({"-Wall", "-Werror", "-g"})
 toolset("clang")
 libdirs({"third_party/vma/lib"})
 includedirs({"third_party/vma/include"})
-links({"glfw", "m", "pthread", "vulkan", "dl", "rt", "X11", "Xxf86vm", "Xrandr", "Xi", "vma"})
+links({"glfw", "m", "pthread", "vulkan", "dl", "rt", "X11", "Xxf86vm", "Xrandr", "Xi", "vma", "stdc++"})
 
 files({"src/**.c","src/**.h"})

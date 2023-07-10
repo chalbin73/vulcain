@@ -76,6 +76,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
                              [VC_HANDLE_COMMAND_BUFFER] = 16,
                              [VC_HANDLE_SEMAPHORE] = 32,
                              [VC_HANDLE_IMAGE] = 64,
+                             [VC_HANDLE_BUFFER] = 64,
                              [VC_HANDLE_DESCRIPTOR_SET_LAYOUT] = 64,
                              [VC_HANDLE_DESCRIPTOR_SET] = 128,
                          });
@@ -108,6 +109,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
         // TODO: Use a dynamic pool swapping system
         VkDescriptorPoolCreateInfo pool_ci = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
             .maxSets = 64,
             .poolSizeCount = 1,
             .pPoolSizes = (VkDescriptorPoolSize[1]){
@@ -459,11 +461,11 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
             };
         ctx->swapchain.swapchain_image_hndls[i] = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE, &img);
 
-        vc_cmd_image_pipe_barrier(ctx, cmd_buf, ctx->swapchain.swapchain_image_hndls[i],
-                                  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                  VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
-                                  VC_QUEUE_MAIN, VC_QUEUE_MAIN);
+        vc_command_image_pipe_barrier(ctx, cmd_buf, ctx->swapchain.swapchain_image_hndls[i],
+                                      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                      VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+                                      VC_QUEUE_MAIN, VC_QUEUE_MAIN);
     }
 
     vc_command_buffer_end(ctx, cmd_buf);
@@ -764,89 +766,6 @@ void vc_destroy_ctx(vc_ctx *ctx)
 void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
 {
     vc_handle_mgr_free(&ctx->handle_manager, hndl, ctx);
-}
-
-b8 _vc_priv_command_buffer_destroy(vc_ctx *ctx, vc_priv_man_command_buffer *buffer)
-{
-    vkFreeCommandBuffers(ctx->vk_device, buffer->pool, 1, &buffer->command_buffer);
-    return TRUE;
-}
-
-vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue)
-{
-    VkCommandBufferAllocateInfo alloc_ci =
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandBufferCount = 1,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandPool = ctx->queues.pools[queue],
-        };
-
-    vc_priv_man_command_buffer buf;
-    buf.queue_type = queue;
-    buf.pool = alloc_ci.commandPool;
-    VK_CHECKH(vkAllocateCommandBuffers(ctx->vk_device, &alloc_ci, &buf.command_buffer), "Could not allocate a command buffer in one of the main pools.");
-    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_COMMAND_BUFFER, (vc_man_destroy_func)_vc_priv_command_buffer_destroy);
-    return vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_COMMAND_BUFFER, &buf);
-}
-
-void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_stages)
-{
-    VkSemaphore semaphore = VK_NULL_HANDLE;
-
-    if (wait_on_semaphore != VC_NULL_HANDLE)
-    {
-        vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, wait_on_semaphore);
-        semaphore = sem->semaphore;
-    }
-    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
-
-    VkSubmitInfo submit_i =
-        {
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &buf->command_buffer,
-            .signalSemaphoreCount = 0,
-            .waitSemaphoreCount = (wait_on_semaphore == VC_NULL_HANDLE) ? 0 : 1,
-            .pWaitSemaphores = &semaphore,
-            .pWaitDstStageMask = wait_stages,
-        };
-
-    vkQueueSubmit(ctx->queues.queues[buf->queue_type], 1, &submit_i, VK_NULL_HANDLE);
-}
-
-void vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer)
-{
-    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
-
-    VkCommandBufferBeginInfo begin_i =
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-        };
-
-    vkBeginCommandBuffer(buf->command_buffer, &begin_i);
-}
-
-void vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer)
-{
-    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
-    vkEndCommandBuffer(buf->command_buffer);
-}
-
-void vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc)
-{
-    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
-    vc_priv_man_compute_pipe   *pipe = vc_handle_mgr_ptr(&ctx->handle_manager, desc->pipe);
-
-    vkCmdBindPipeline(buf->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipe->pipeline);
-    vkCmdDispatch(buf->command_buffer, desc->groups_x, desc->groups_y, desc->groups_z);
-}
-
-void vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer)
-{
-    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
-    vkResetCommandBuffer(buf->command_buffer, 0);
 }
 
 void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)

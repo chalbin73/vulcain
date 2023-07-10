@@ -48,6 +48,7 @@ vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
 
     vc_priv_man_compute_pipe pipe =
         {
+            .type = VC_PIPELINE_TYPE_COMPUTE,
             .pipeline = pipeline,
             .layout = layout};
 

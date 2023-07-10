@@ -33,6 +33,13 @@ int main(i32 argc, char **argv)
                         },
                   &(physical_device_query){.allowed_types = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU | VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU, .requested_features = {.geometryShader = TRUE}, .request_main_queue = TRUE, .request_compute_queue = TRUE, .request_transfer_queue = FALSE});
 
+    vc_buffer buffer = vc_buffer_allocate(&ctx, (buffer_alloc_desc){
+                                                    .buffer_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                                    .require_device_local = TRUE,
+                                                    .require_host_visible = TRUE,
+                                                    .size = sizeof(f32),
+                                                });
+
     descriptor_set_desc descriptor_desc = (descriptor_set_desc){
         .binding_count = 1,
         .bindings = (descriptor_binding_desc[1]){
@@ -40,9 +47,13 @@ int main(i32 argc, char **argv)
                 .descriptor_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .descriptor_count = 1,
                 .stage_flags = VK_SHADER_STAGE_COMPUTE_BIT,
-            }}};
-
+                .buffer_info = &(descriptor_binding_buffer){
+                    .buffer = buffer,
+                    .whole_buffer = TRUE,
+                }}}};
     vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, descriptor_desc);
+    vc_descriptor_set        set = vc_descriptor_set_create(&ctx, descriptor_desc, set_layout);
+    (void)set;
 
     u64             source_size = 0;
     u8             *source = fio_read_whole_file("shaders/test.comp.spv", &source_size);
@@ -70,11 +81,12 @@ int main(i32 argc, char **argv)
         vc_command_buffer_begin(&ctx, buf);
 
         vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
-        vc_cmd_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL,
-                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                  VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
-                                  VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
+        vc_command_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL,
+                                      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                      VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+                                      VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
 
+        vc_command_buffer_bind_descriptor_set(&ctx, buf, pipe, set);
         vc_command_buffer_compute_pipeline(&ctx, buf, &(compute_dispatch_desc){
                                                           .pipe = pipe,
                                                           .groups_x = 1,
@@ -82,10 +94,10 @@ int main(i32 argc, char **argv)
                                                           .groups_z = 1,
                                                       });
 
-        vc_cmd_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                  VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
-                                  VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
+        vc_command_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                      VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+                                      VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
 
         vc_command_buffer_end(&ctx, buf);
         vc_command_buffer_submit(&ctx, buf, sem, (VkPipelineStageFlags[1]){[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT});

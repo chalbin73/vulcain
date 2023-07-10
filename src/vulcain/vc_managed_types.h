@@ -7,6 +7,7 @@
 
 typedef struct
 {
+    pipeline_type    type;
     VkPipeline       pipeline;
     VkPipelineLayout layout;
 } vc_priv_man_compute_pipe;
@@ -43,6 +44,8 @@ typedef struct
 
 typedef struct
 {
-    VkBuffer      buffer;
-    VmaAllocation alloc;
+    VkBuffer          buffer;
+    VmaAllocation     allocation;
+    memory_visibility memory_visibility;
+    u64               size;
 } vc_priv_man_buffer;

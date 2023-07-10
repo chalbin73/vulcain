@@ -9,7 +9,7 @@ b8 _vc_descriptor_set_layout_destroy(vc_ctx *ctx, vc_priv_man_descriptor_set_lay
 
 vc_descriptor_set_layout vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc)
 {
-    VkDescriptorSetLayoutBinding *bindings = mem_allocate(sizeof(desc_set_desc.binding_count), MEMORY_TAG_RENDERER);
+    VkDescriptorSetLayoutBinding *bindings = mem_allocate(sizeof(VkDescriptorSetLayoutBinding) * desc_set_desc.binding_count, MEMORY_TAG_RENDERER);
 
     for (int i = 0; i < desc_set_desc.binding_count; i++)
     {
@@ -28,7 +28,9 @@ vc_descriptor_set_layout vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor
             .pBindings = bindings,
         };
 
-    return vc_priv_desc_set_layout_get(ctx, &dsl_ci);
+    vc_descriptor_set_layout set_layout = vc_priv_desc_set_layout_get(ctx, &dsl_ci);
+    mem_free(bindings);
+    return set_layout;
 }
 
 b8 _vc_priv_descriptor_set_destroy(vc_ctx *ctx, vc_priv_man_descriptor_set *set)
@@ -54,7 +56,7 @@ vc_descriptor_set vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc
         };
 
     VK_CHECKH(vkAllocateDescriptorSets(ctx->vk_device, &alloc_i, &set.set), "Could not allocate a descriptor set.");
-    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_DESCRIPTOR_SET_LAYOUT, (vc_man_destroy_func)_vc_priv_descriptor_set_destroy);
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_DESCRIPTOR_SET, (vc_man_destroy_func)_vc_priv_descriptor_set_destroy);
 
     VkWriteDescriptorSet *writes = mem_allocate(sizeof(VkWriteDescriptorSet) * desc_set_desc.binding_count, MEMORY_TAG_RENDERER);
 
@@ -66,17 +68,29 @@ vc_descriptor_set vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc
             .dstBinding = i,
             .descriptorCount = desc_set_desc.bindings[i].descriptor_count,
             .descriptorType = desc_set_desc.bindings[i].descriptor_type,
-            .pBufferInfo = &(VkDescriptorBufferInfo){
-                                                     .buffer = desc_set_desc.bindings[i].buffer_info.buffer,
-                                                     .offset = desc_set_desc.bindings[i].buffer_info.offset,
-                                                     .range = desc_set_desc.bindings[i].buffer_info.range,
-                                                     },
-            .pImageInfo = &(VkDescriptorImageInfo){
-                                                     .sampler = desc_set_desc.bindings[i].image_info.sampler,
-                                                     .imageView = desc_set_desc.bindings[i].image_info.imageView,
-                                                     .imageLayout = desc_set_desc.bindings[i].image_info.imageLayout,
-                                                     },
         };
+
+        if (desc_set_desc.bindings[i].buffer_info)
+        {
+            descriptor_binding_buffer *buffer_binding = desc_set_desc.bindings[i].buffer_info;
+            vc_priv_man_buffer        *buf_info = vc_handle_mgr_ptr(&ctx->handle_manager, buffer_binding->buffer);
+
+            writes[i].pBufferInfo = &(VkDescriptorBufferInfo){
+                .buffer = buf_info->buffer,
+                .offset = (buffer_binding->whole_buffer) ? 0 : buffer_binding->offset,
+                .range = (buffer_binding->whole_buffer) ? buf_info->size : buffer_binding->range,
+            };
+        }
+
+        if (desc_set_desc.bindings[i].image_info)
+        {
+            ERROR("Image binding not implemented idiot.");
+            writes[i].pImageInfo = &(VkDescriptorImageInfo){
+                .sampler = desc_set_desc.bindings[i].image_info->sampler,
+                .imageView = desc_set_desc.bindings[i].image_info->imageView,
+                .imageLayout = desc_set_desc.bindings[i].image_info->imageLayout,
+            };
+        }
     }
 
     vkUpdateDescriptorSets(ctx->vk_device, desc_set_desc.binding_count, writes, 0, NULL);
