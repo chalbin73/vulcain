@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __BASE_DARRAY_H__
+#define __BASE_DARRAY_H__
 
 #include "../math.h"
 #include "../memory.h"
@@ -41,6 +42,14 @@ void _darray_set_field(void *array, u64 field, u64 value);
  */
 #define darray_create(type) \
     _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type), MEMORY_TAG_DARRAY)
+
+/**
+ * @brief Creates a dynamic array, with the size provided.
+ *
+ * @param type The size of the stored object
+ */
+#define darray_create_sized(size) \
+    _darray_create(DARRAY_DEFAULT_CAPACITY, size, MEMORY_TAG_DARRAY)
 
 /**
  * @brief Creates a dynamic array, with the typename and memory tag provided.
@@ -114,6 +123,18 @@ void _darray_set_field(void *array, u64 field, u64 value);
     }
 
 /**
+ * @brief Pushes an object pointed to in the array
+ *
+ * @param array The array
+ * @param ptr A pointer from which to copy from the data to store
+ * @attention This will not work with string literals
+ */
+#define darray_push_ptr(array, ptr)       \
+    {                                     \
+        array = _darray_push(array, ptr); \
+    }
+
+/**
  * @brief Pops an object: removes and returns the last object of the array
  *
  * @param array The array
@@ -147,3 +168,5 @@ void _darray_set_field(void *array, u64 field, u64 value);
  */
 #define darray_pop_at(array, index, dest) \
     array = _darray_pop_at(array, index, dest)
+
+#endif // __BASE_DARRAY_H__

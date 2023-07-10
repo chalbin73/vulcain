@@ -92,8 +92,29 @@ void mem_memset(void *ptr, u8 data, u64 byte_count);
  * @param dest The destination
  * @param src The source
  * @param byte_count The number of bytes to copy
+ * @attention The regions may not overlapp
  */
 void mem_memcpy(void *dest, void *src, u64 byte_count);
+
+/**
+ * @brief Compares two bloks of memory
+ *
+ * @param a The first block of memory
+ * @param b The second block of memory
+ * @param byte_count The number of bytes to compare
+ * @returns 0 if equal, non-zero if different
+ */
+i32 mem_memcmp(void *a, void *b, u64 byte_count);
+
+/**
+ * @brief Moves a block of memory
+ *
+ * @param a The first block of memory
+ * @param b The second block of memory
+ * @param byte_count The number of bytes to move
+ * @returns a
+ */
+void *mem_memmove(void *a, void *b, u64 byte_count);
 
 /**
  * @brief Prints the memory using accoring to each tag

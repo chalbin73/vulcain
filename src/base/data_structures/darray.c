@@ -99,12 +99,12 @@ void *_darray_pop_at(void *array, u64 index, void *dest)
         mem_memcpy(dest, (void *)(addr + (index * stride)), stride);
     }
 
-    if (index != length - 1)
+    if (index != (length - 1))
     {
-        mem_memcpy(
+        mem_memmove(
             (void *)(addr + (index * stride)),
             (void *)(addr + ((index + 1) * stride)),
-            stride * (length - index));
+            stride * ((length - index) - 1));
     }
 
     _darray_set_field(array, DARRAY_LENGTH, length - 1);
@@ -133,7 +133,7 @@ void *_darray_insert_at(void *array, u64 index, void *obj)
 
     if (index != length - 1)
     {
-        mem_memcpy(
+        mem_memmove(
             (void *)(addr + ((index + 1) * stride)),
             (void *)(addr + (index * stride)),
             stride * (length - index));

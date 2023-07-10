@@ -1,6 +1,11 @@
 #include "vc_managed_types.h"
 
-b8 _vc_priv_compute_pipe_destroy(vc_ctx *ctx, vc_priv_man_compute_pipe *pipe);
+b8 _vc_priv_compute_pipe_destroy(vc_ctx *ctx, vc_priv_man_compute_pipe *pipe)
+{
+    vkDestroyPipeline(ctx->vk_device, pipe->pipeline, NULL);
+    vkDestroyPipelineLayout(ctx->vk_device, pipe->layout, NULL);
+    return TRUE;
+}
 
 vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
 {
@@ -17,7 +22,8 @@ vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
     VkPipelineLayoutCreateInfo layout_ci =
         {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount = 0,
+            .setLayoutCount = (desc->set_layout == VC_NULL_HANDLE) ? 0 : 1,
+            .pSetLayouts = (desc->set_layout == VC_NULL_HANDLE) ? NULL : vc_handle_mgr_ptr(&ctx->handle_manager, desc->set_layout),
             .pushConstantRangeCount = 0,
         };
 
@@ -50,11 +56,4 @@ vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
     vc_compute_pipe pipe_h = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_COMPUTE_PIPE, &pipe);
     vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_COMPUTE_PIPE, (vc_man_destroy_func)_vc_priv_compute_pipe_destroy);
     return pipe_h;
-}
-
-b8 _vc_priv_compute_pipe_destroy(vc_ctx *ctx, vc_priv_man_compute_pipe *pipe)
-{
-    vkDestroyPipeline(ctx->vk_device, pipe->pipeline, NULL);
-    vkDestroyPipelineLayout(ctx->vk_device, pipe->layout, NULL);
-    return TRUE;
 }

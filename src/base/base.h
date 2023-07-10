@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __BASE_H__
+#define __BASE_H__
 
 #include "ansi.h"
 #include "compiler.h"
@@ -10,3 +11,6 @@
 #include "platform.h"
 #include "system.h"
 #include "types.h"
+
+#endif // __BASE_H__
+

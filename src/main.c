@@ -33,21 +33,29 @@ int main(i32 argc, char **argv)
                         },
                   &(physical_device_query){.allowed_types = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU | VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU, .requested_features = {.geometryShader = TRUE}, .request_main_queue = TRUE, .request_compute_queue = TRUE, .request_transfer_queue = FALSE});
 
-    
-    
+    descriptor_set_desc descriptor_desc = (descriptor_set_desc){
+        .binding_count = 1,
+        .bindings = (descriptor_binding_desc[1]){
+            [0] = (descriptor_binding_desc){
+                .descriptor_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptor_count = 1,
+                .stage_flags = VK_SHADER_STAGE_COMPUTE_BIT,
+            }}};
+
+    vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, descriptor_desc);
+
     u64             source_size = 0;
     u8             *source = fio_read_whole_file("shaders/test.comp.spv", &source_size);
     vc_compute_pipe pipe = vc_compute_pipe_create(&ctx, &(compute_pipe_desc){
                                                             .shader_code_length = source_size,
                                                             .shader_code = source,
-                                                            .binding_count = 0,
-                                                            .bindings = NULL,
+                                                            .set_layout = set_layout,
                                                         });
 
     vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_COMPUTE);
 
     vc_semaphore sem = vc_semaphore_create(&ctx);
-    (void) sem;
+    (void)sem;
 
     (void)buf;
     (void)pipe;
@@ -60,12 +68,12 @@ int main(i32 argc, char **argv)
 
         vc_command_buffer_reset(&ctx, buf);
         vc_command_buffer_begin(&ctx, buf);
-       
+
         vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
         vc_cmd_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-                VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT, 
-		VC_QUEUE_IGNORED, VC_QUEUE_IGNORED); 
+                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                  VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+                                  VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
 
         vc_command_buffer_compute_pipeline(&ctx, buf, &(compute_dispatch_desc){
                                                           .pipe = pipe,
@@ -75,9 +83,9 @@ int main(i32 argc, char **argv)
                                                       });
 
         vc_cmd_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-                VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, 
-		VC_QUEUE_IGNORED, VC_QUEUE_IGNORED); 
+                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                  VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+                                  VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
 
         vc_command_buffer_end(&ctx, buf);
         vc_command_buffer_submit(&ctx, buf, sem, (VkPipelineStageFlags[1]){[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT});

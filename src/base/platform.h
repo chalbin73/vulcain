@@ -13,3 +13,5 @@ void *platform_realloc(void *ptr, u64 size);
 void  platform_free(void *ptr);
 void  platform_memset(void *ptr, u8 data, u64 byte_count);
 void  platform_memcpy(void *dest, void *src, u64 byte_count);
+i32   platform_memcmp(void *a, void *b, u64 n);
+void *platform_memmove(void *a, void *b, u64 n);

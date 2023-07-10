@@ -95,6 +95,16 @@ void mem_memcpy(void *dest, void *src, u64 byte_count)
     platform_memcpy(dest, src, byte_count);
 }
 
+i32 mem_memcmp(void *a, void *b, u64 byte_count)
+{
+    return platform_memcmp(a, b, byte_count);
+}
+
+void *mem_memmove(void *a, void *b, u64 byte_count)
+{
+    return platform_memmove(a, b, byte_count);
+}
+
 void mem_print_memory_usage()
 {
     INFO("~~~~~~~~~~ Current memory usage ~~~~~~~~~~");

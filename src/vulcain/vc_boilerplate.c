@@ -1,3 +1,4 @@
+#include "../base/data_structures/hashmap.h"
 #include "vc_handles.h"
 #include "vc_managed_types.h"
 #include "vulcain.h"
@@ -59,8 +60,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
     return VK_FALSE;
 }
 
+// Identity hash function
+u64 _vc_priv_u64_hash_id(void *obj, u64 size)
+{
+    return *(u64 *)obj;
+}
+
 b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
+    hashmap_create(&ctx->desc_set_layouts_hashmap, 17, sizeof(u64), sizeof(vc_descriptor_set_layout), _vc_priv_u64_hash_id);
     // TODO: Make this configurable
     vc_handle_mgr_create(&ctx->handle_manager,
                          (vc_handle_mgr_counts){
@@ -68,8 +76,10 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
                              [VC_HANDLE_COMMAND_BUFFER] = 16,
                              [VC_HANDLE_SEMAPHORE] = 32,
                              [VC_HANDLE_IMAGE] = 64,
+                             [VC_HANDLE_DESCRIPTOR_SET_LAYOUT] = 64,
+                             [VC_HANDLE_DESCRIPTOR_SET] = 128,
                          });
-    
+
     if (!_vc_priv_setup_instance(ctx, desc))
     {
         FATAL("Could not setup vkInstance, aborting.");
@@ -92,7 +102,37 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
     }
     INFO("Vulcain instance setup.");
 
+    INFO("Creating descriptor pool");
+    // Descriptor pool creation
+    {
+        // TODO: Use a dynamic pool swapping system
+        VkDescriptorPoolCreateInfo pool_ci = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = 64,
+            .poolSizeCount = 1,
+            .pPoolSizes = (VkDescriptorPoolSize[1]){
+                                                    [0] = {.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 64},
+                                                    }
+        };
 
+        VK_CHECKR(vkCreateDescriptorPool(ctx->vk_device, &pool_ci, NULL, &ctx->vk_main_descriptor_pool), "Could not create main descriptor pool.");
+    }
+
+    // Vma creation
+    {
+        VmaVulkanFunctions vma_vulkan_func = {0};
+        vma_vulkan_func.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+        vma_vulkan_func.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+
+        VmaAllocatorCreateInfo allocator_ci = {0};
+        allocator_ci.vulkanApiVersion = VK_API_VERSION_1_0;
+        allocator_ci.physicalDevice = ctx->vk_selected_physical_device;
+        allocator_ci.device = ctx->vk_device;
+        allocator_ci.instance = ctx->vk_instance;
+        allocator_ci.pVulkanFunctions = &vma_vulkan_func;
+
+        VK_CHECKR(vmaCreateAllocator(&allocator_ci, &ctx->vma_allocator), "Could not create a VMA Allocator.");
+    }
 
     return TRUE;
 }
@@ -384,7 +424,7 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
 
     vc_command_buffer cmd_buf = vc_command_buffer_main_create(ctx, VC_QUEUE_MAIN);
     vc_command_buffer_begin(ctx, cmd_buf);
-    
+
     for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
         VkImageViewCreateInfo view_ci =
@@ -412,26 +452,26 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
 
         VK_CHECKR(vkCreateImageView(ctx->vk_device, &view_ci, NULL, &ctx->swapchain.swapchain_image_views[i]), "Could not create an image view.");
 
-        vc_priv_man_image img = 
-        {
-            .external = TRUE,
-            .image = ctx->swapchain.swapchain_images[i],
-        };
+        vc_priv_man_image img =
+            {
+                .external = TRUE,
+                .image = ctx->swapchain.swapchain_images[i],
+            };
         ctx->swapchain.swapchain_image_hndls[i] = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE, &img);
 
-	vc_cmd_image_pipe_barrier(ctx, cmd_buf, ctx->swapchain.swapchain_image_hndls[i],
-				  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				  VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
-				  VC_QUEUE_MAIN, VC_QUEUE_MAIN);
+        vc_cmd_image_pipe_barrier(ctx, cmd_buf, ctx->swapchain.swapchain_image_hndls[i],
+                                  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                  VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+                                  VC_QUEUE_MAIN, VC_QUEUE_MAIN);
     }
 
     vc_command_buffer_end(ctx, cmd_buf);
     vc_command_buffer_submit(ctx, cmd_buf, VC_NULL_HANDLE, 0);
     vc_queue_wait_idle(ctx, VC_QUEUE_MAIN);
     vc_handle_destroy(ctx, cmd_buf);
-    
-    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, NULL); //TODO: Image destruction
+
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, NULL); // TODO: Image destruction
     TRACE("Created swapchain image views.");
     return TRUE;
 }
@@ -674,6 +714,14 @@ void vc_destroy_ctx(vc_ctx *ctx)
     TRACE("Destroying vc context.");
 
     vc_handle_mgr_destroy(&ctx->handle_manager, ctx);
+    hashmap_destroy(&ctx->desc_set_layouts_hashmap);
+
+    vmaDestroyAllocator(ctx->vma_allocator);
+
+    // Descriptor pool destruction
+    {
+        vkDestroyDescriptorPool(ctx->vk_device, ctx->vk_main_descriptor_pool, NULL);
+    }
 
     if (ctx->swapchain.vk_swapchain)
     {
@@ -746,10 +794,10 @@ void vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_
 {
     VkSemaphore semaphore = VK_NULL_HANDLE;
 
-    if(wait_on_semaphore != VC_NULL_HANDLE)
+    if (wait_on_semaphore != VC_NULL_HANDLE)
     {
-	vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, wait_on_semaphore);
-	semaphore = sem->semaphore;
+        vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, wait_on_semaphore);
+        semaphore = sem->semaphore;
     }
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
 
@@ -814,13 +862,12 @@ void vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquire
 
 void vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
 {
-    vkQueuePresentKHR(ctx->queues.queues[VC_QUEUE_MAIN], &(VkPresentInfoKHR)
-            {
-                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-                .pImageIndices = &image_id,
-                .pSwapchains = &ctx->swapchain.vk_swapchain,
-                .swapchainCount = 1,
-                .waitSemaphoreCount = 0,
+    vkQueuePresentKHR(ctx->queues.queues[VC_QUEUE_MAIN], &(VkPresentInfoKHR){
+                                                             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                                                             .pImageIndices = &image_id,
+                                                             .pSwapchains = &ctx->swapchain.vk_swapchain,
+                                                             .swapchainCount = 1,
+                                                             .waitSemaphoreCount = 0,
 
-            });
+                                                         });
 }

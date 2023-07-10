@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __BASE_TIGHT_B8__
+#define __BASE_TIGHT_B8__
 
 /**
  * @file tight_b8.h
@@ -13,6 +14,9 @@
 
 #include "../memory.h"
 #include "../types.h"
+
+#define TB8_MOD8(x)     ((x)&7)
+#define TB8_U64_DIV8(x) ((x) >> 3)
 
 /**
  * @brief Sets all the boolean to false in a tight b8
@@ -77,3 +81,5 @@ b8 tb8_some_true(b8 *array, u64 bool_count);
  * @return b8 TRUE or FALSe
  */
 b8 tb8_all_true(b8 *array, u64 bool_count);
+
+#endif // __BASE_TIGHT_B8__

@@ -2,6 +2,7 @@
 
 #include "../base/base.h"
 #include "vulcain.h"
+#include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
 typedef struct
@@ -31,4 +32,17 @@ typedef struct
 typedef struct
 {
     VkDescriptorSetLayout set_layout;
+    u64                   hash;
 } vc_priv_man_descriptor_set_layout;
+
+typedef struct
+{
+    u64             layout_hash;
+    VkDescriptorSet set;
+} vc_priv_man_descriptor_set;
+
+typedef struct
+{
+    VkBuffer      buffer;
+    VmaAllocation alloc;
+} vc_priv_man_buffer;

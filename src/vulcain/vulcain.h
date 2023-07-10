@@ -8,6 +8,8 @@
 #include <vulkan/vulkan_core.h>
 #include "windowing_systems/vc_windowing_systems.h"
 #include "vc_handles.h"
+#include "../base/data_structures/hashmap.h"
+#include <vk_mem_alloc.h>
 
 // clang-format on
 typedef struct
@@ -50,10 +52,9 @@ typedef struct
 
 typedef struct
 {
-    u8                *shader_code;
-    u32                shader_code_length;
-    u32                binding_count;
-    pipe_binding_desc *bindings;
+    u8                      *shader_code;
+    u32                      shader_code_length;
+    vc_descriptor_set_layout set_layout;
 } compute_pipe_desc;
 
 typedef struct
@@ -63,6 +64,50 @@ typedef struct
     u32             groups_y;
     u32             groups_z;
 } compute_dispatch_desc;
+
+typedef enum
+{
+    VC_MEMORY_HOST_VISIBLE = 0,
+    VC_MEMORY_DEVICE_LOCAL
+} memory_visibility_enum;
+
+typedef struct
+{
+    memory_visibility_enum memory_visibility;
+} buffer_alloc_desc;
+
+/* ---------------- Descriptors ---------------- */
+
+// For now those are the same as VkDescriptorBufferInfo, VkDescriptorImageInfo
+typedef struct
+{
+    VkBuffer     buffer;
+    VkDeviceSize offset;
+    VkDeviceSize range;
+} descriptor_binding_buffer;
+
+typedef struct
+{
+    VkSampler     sampler;
+    VkImageView   imageView;
+    VkImageLayout imageLayout;
+} descriptor_binding_image;
+
+typedef struct
+{
+    VkDescriptorType   descriptor_type;
+    uint32_t           descriptor_count;
+    VkShaderStageFlags stage_flags;
+
+    descriptor_binding_buffer buffer_info;
+    descriptor_binding_image  image_info;
+} descriptor_binding_desc;
+
+typedef struct
+{
+    u32                      binding_count;
+    descriptor_binding_desc *bindings;
+} descriptor_set_desc;
 
 typedef struct
 {
@@ -74,6 +119,9 @@ typedef struct
     b8                        use_windowing;
     vc_windowing_system_funcs windowing_system;
     vc_handle_mgr             handle_manager;
+    hashmap                   desc_set_layouts_hashmap;
+    VkDescriptorPool          vk_main_descriptor_pool; // TODO: Make a swapping pool system.
+    VmaAllocator              vma_allocator;
 
     struct queues
     {
@@ -139,15 +187,25 @@ typedef struct
     }                                                                            \
     while (0);
 
+/* ---------------- ContextS ---------------- */
+
 b8   vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query);
 void vc_destroy_ctx(vc_ctx *ctx);
+
+/* ---------------- Handles ---------------- */
 
 // Destroys any kind of handle based on its destroy function
 void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 
+/* ---------------- Queues ---------------- */
+
 void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type);
 
+/* ---------------- Pipelines ---------------- */
+
 vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
+
+/* ---------------- Commands ---------------- */
 
 vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue);
 void              vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_stages);
@@ -156,16 +214,29 @@ void              vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_b
 void              vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
 
+/* ---------------- Synchronisation ---------------- */
+
 vc_semaphore vc_semaphore_create(vc_ctx *ctx);
+
+/* ---------------- Swapchain ---------------- */
 
 void      vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore);
 void      vc_swapchain_present_image(vc_ctx *ctx, u32 image_id);
 vc_image *vc_swapchain_get_image_hndls(vc_ctx *ctx);
 
-vc_descriptor_set_layout vc_descriptor_set_layout_create(vc_ctx *ctx);
+/* ---------------- Descriptors ---------------- */
+
+vc_descriptor_set_layout vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc);
+vc_descriptor_set        vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc, vc_descriptor_set_layout set_layout);
+
+/* ---------------- Pipelines ---------------- */
 
 void vc_cmd_image_pipe_barrier(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image image,
                                VkImageLayout src_layout, VkImageLayout dst_layout,
                                VkPipelineStageFlags from, VkPipelineStageFlags to,
                                VkAccessFlags src_access, VkAccessFlags dst_access,
                                vc_queue_type src_queue, vc_queue_type dst_queue);
+
+vc_descriptor_set_layout vc_priv_desc_set_layout_get(vc_ctx *ctx, VkDescriptorSetLayoutCreateInfo *ci);
+
+/* ---------------- Buffers ---------------- */
