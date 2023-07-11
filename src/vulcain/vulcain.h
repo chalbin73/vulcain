@@ -43,6 +43,13 @@ typedef enum
     VC_QUEUE_TYPE_COUNT
 } vc_queue_type;
 
+typedef enum
+{
+    VC_QUEUE_MAIN_BIT = 0b1,
+    VC_QUEUE_COMPUTE_BIT = 0b10,
+    VC_QUEUE_TRANSFER_BIT = 0b100,
+} vc_queue_flags;
+
 typedef struct
 {
     u32                binding;
@@ -86,6 +93,24 @@ typedef struct
     VkBufferUsageFlagBits buffer_usage;
     u64                   size;
 } buffer_alloc_desc;
+
+#define VC_IMAGE_CREATE_AUTO_MIP 0xFFFFFFFF
+
+typedef struct
+{
+    u32                   image_dimension; // 1D 2D 3D
+    VkFormat              image_format;
+    u32                   width;
+    u32                   height;
+    u32                   depth;
+    u32                   mip_levels;
+    u32                   layers;
+    VkSampleCountFlagBits sample_count;
+    VkImageUsageFlags     image_usage;
+    b8                    share;  // To share the resource accross queues
+    vc_queue_flags        queues; // Only used is share is true
+    VkImageLayout         layout; // Layout transition is performed here if not undefined
+} image_create_desc;
 
 /* ---------------- Descriptors ---------------- */
 
@@ -224,7 +249,7 @@ vc_compute_pipe vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
 /* ---------------- Commands ---------------- */
 
 vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue);
-void              vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_stages);
+void              vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_on_stages);
 void              vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
 void              vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
