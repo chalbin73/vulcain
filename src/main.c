@@ -17,51 +17,93 @@ int main(i32 argc, char **argv)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     window = glfwCreateWindow(1920, 1080, "Hello !", NULL, NULL);
     glfwShowWindow(window);
-    u32          exts_count = 0;
+    u32 exts_count    = 0;
     const char **exts = glfwGetRequiredInstanceExtensions(&exts_count);
 
-    vc_ctx ctx = {0};
-    vc_create_ctx(&ctx, &(instance_desc){
-                            .app_name = "Playground",
-                            .engine_name = "Playground",
-                            .engine_version = VK_MAKE_VERSION(0, 0, 0),
-                            .enable_debugging = TRUE,
-                            .extension_count = exts_count,
-                            .extensions = (char **)exts,
-                            .enable_windowing = TRUE,
-                            .windowing_system = vc_windowing_system_glfw(window),
-                        },
-                  &(physical_device_query){.allowed_types = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU | VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU, .requested_features = {.geometryShader = TRUE}, .request_main_queue = TRUE, .request_compute_queue = TRUE, .request_transfer_queue = FALSE});
+    vc_ctx ctx =
+    {
+        0
+    };
+    vc_create_ctx(
+        &ctx,
+        &(instance_desc){
+            .app_name         = "Playground",
+            .engine_name      = "Playground",
+            .engine_version   = VK_MAKE_VERSION(0, 0, 0),
+            .enable_debugging = TRUE,
+            .extension_count  = exts_count,
+            .extensions       = (char **)exts,
+            .enable_windowing = TRUE,
+            .windowing_system = vc_windowing_system_glfw(window),
+        },
+        &(physical_device_query){
+            .allowed_types          = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU | VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+            .requested_features     = { .geometryShader = TRUE },
+            .request_main_queue     = TRUE,
+            .request_compute_queue  = TRUE,
+            .request_transfer_queue = FALSE
+        }
+        );
 
-    vc_buffer buffer = vc_buffer_allocate(&ctx, (buffer_alloc_desc){
-                                                    .buffer_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                                    .require_device_local = TRUE,
-                                                    .require_host_visible = TRUE,
-                                                    .size = sizeof(f32),
-                                                });
+    vc_buffer buffer = vc_buffer_allocate(
+        &ctx,
+        (buffer_alloc_desc){
+            .buffer_usage         = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            .require_device_local = TRUE,
+            .require_host_visible = TRUE,
+            .size                 = sizeof(f32),
+        }
+        );
 
-    descriptor_set_desc descriptor_desc = (descriptor_set_desc){
+    vc_image img = vc_image_allocate(
+        &ctx,
+        (image_create_desc){
+            .image_dimension = 2,
+            .image_format    = VK_FORMAT_R8G8B8A8_UINT,
+            .width           = 2048,
+            .height          = 2048,
+            .depth           = 1,
+            .image_usage     = VK_IMAGE_USAGE_STORAGE_BIT,
+            .share           = FALSE,
+            .layout          = VK_IMAGE_LAYOUT_GENERAL,
+        }
+        );
+    (void)img;
+
+    descriptor_set_desc descriptor_desc =
+    {
         .binding_count = 1,
-        .bindings = (descriptor_binding_desc[1]){
-            [0] = (descriptor_binding_desc){
-                .descriptor_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .bindings      = (descriptor_binding_desc[1])
+        {
+            [0] = (descriptor_binding_desc)
+            {
+                .descriptor_type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .descriptor_count = 1,
-                .stage_flags = VK_SHADER_STAGE_COMPUTE_BIT,
-                .buffer_info = &(descriptor_binding_buffer){
-                    .buffer = buffer,
+                .stage_flags      = VK_SHADER_STAGE_COMPUTE_BIT,
+                .buffer_info      =
+                    &(descriptor_binding_buffer)
+                {
+                    .buffer       = buffer,
                     .whole_buffer = TRUE,
-                }}}};
+                }
+            }
+        }
+    };
+
     vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, descriptor_desc);
-    vc_descriptor_set        set = vc_descriptor_set_create(&ctx, descriptor_desc, set_layout);
+    vc_descriptor_set set               = vc_descriptor_set_create(&ctx, descriptor_desc, set_layout);
     (void)set;
 
-    u64             source_size = 0;
-    u8             *source = fio_read_whole_file("shaders/test.comp.spv", &source_size);
-    vc_compute_pipe pipe = vc_compute_pipe_create(&ctx, &(compute_pipe_desc){
-                                                            .shader_code_length = source_size,
-                                                            .shader_code = source,
-                                                            .set_layout = set_layout,
-                                                        });
+    u64 source_size      = 0;
+    u8 *source           = fio_read_whole_file("shaders/test.comp.spv", &source_size);
+    vc_compute_pipe pipe = vc_compute_pipe_create(
+        &ctx,
+        &(compute_pipe_desc){
+            .shader_code_length = source_size,
+            .shader_code        = source,
+            .set_layout         = set_layout,
+        }
+        );
 
     vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_COMPUTE);
 
@@ -70,7 +112,7 @@ int main(i32 argc, char **argv)
 
     (void)buf;
     (void)pipe;
-    while (!glfwWindowShouldClose(window))
+    while ( !glfwWindowShouldClose(window) )
     {
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
@@ -81,33 +123,59 @@ int main(i32 argc, char **argv)
         vc_command_buffer_begin(&ctx, buf);
 
         vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
-        vc_command_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL,
-                                      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                      VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
-                                      VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
+        vc_command_image_pipe_barrier(
+            &ctx,
+            buf,
+            curi,
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            VK_IMAGE_LAYOUT_GENERAL,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_ACCESS_MEMORY_READ_BIT,
+            VK_ACCESS_MEMORY_WRITE_BIT,
+            VC_QUEUE_IGNORED,
+            VC_QUEUE_IGNORED
+            );
 
         vc_command_buffer_bind_descriptor_set(&ctx, buf, pipe, set);
-        vc_command_buffer_compute_pipeline(&ctx, buf, &(compute_dispatch_desc){
-                                                          .pipe = pipe,
-                                                          .groups_x = 1,
-                                                          .groups_y = 1,
-                                                          .groups_z = 1,
-                                                      });
+        vc_command_buffer_compute_pipeline(
+            &ctx,
+            buf,
+            &(compute_dispatch_desc){
+                .pipe     = pipe,
+                .groups_x = 1,
+                .groups_y = 1,
+                .groups_z = 1,
+            }
+            );
 
-        vc_command_image_pipe_barrier(&ctx, buf, curi, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                      VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
-                                      VC_QUEUE_IGNORED, VC_QUEUE_IGNORED);
+        vc_command_image_pipe_barrier(
+            &ctx,
+            buf,
+            curi,
+            VK_IMAGE_LAYOUT_GENERAL,
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_ACCESS_MEMORY_WRITE_BIT,
+            VK_ACCESS_MEMORY_READ_BIT,
+            VC_QUEUE_IGNORED,
+            VC_QUEUE_IGNORED
+            );
 
         vc_command_buffer_end(&ctx, buf);
-        vc_command_buffer_submit(&ctx, buf, sem, (VkPipelineStageFlags[1]){[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT});
+        vc_command_buffer_submit(
+            &ctx,
+            buf,
+            sem,
+            (VkPipelineStageFlags[1]){[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT }
+            );
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
 
         vc_swapchain_present_image(&ctx, iid);
 
         glfwPollEvents();
     }
-
     vc_destroy_ctx(&ctx);
 
     glfwDestroyWindow(window);
