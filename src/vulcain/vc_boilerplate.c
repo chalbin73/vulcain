@@ -6,15 +6,15 @@
 
 static const char * const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
-b8     _vc_priv_setup_default_swapchain(vc_ctx *ctx);
-b8     _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
-b8     _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
-b8     _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
-i32    _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+b8                                       _vc_priv_setup_default_swapchain(vc_ctx   *ctx);
+b8                                       _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
+b8                                       _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
+b8                                       _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+i32                                      _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 
 // All "boilerplate" objects : instance, device, queues, so on
 
-static VkResult vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger)
+static VkResult                          vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger)
 {
     PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func)
@@ -24,7 +24,7 @@ static VkResult vc_vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkD
     return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static void vc_vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks *pAllocator)
+static void                              vc_vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks *pAllocator)
 {
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func)
@@ -33,7 +33,7 @@ static void vc_vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtils
     }
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
+static VKAPI_ATTR VkBool32 VKAPI_CALL    vc_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
     switch (messageSeverity)
     {
@@ -61,12 +61,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vc_debug_callback(VkDebugUtilsMessageSever
 }
 
 // Identity hash function
-u64 _vc_priv_u64_hash_id(void *obj, u64 size)
+u64    _vc_priv_u64_hash_id(void *obj, u64 size)
 {
     return *(u64 *)obj;
 }
 
-b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
+b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
     hashmap_create(&ctx->desc_set_layouts_hashmap, 17, sizeof(u64), sizeof(vc_descriptor_set_layout), _vc_priv_u64_hash_id);
     // TODO: Make this configurable
@@ -114,7 +114,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
             .maxSets       = 64,
             .poolSizeCount = 1,
             .pPoolSizes    = (VkDescriptorPoolSize[1]){
-                [0] = { .type= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                .descriptorCount    = 64 },
+                [0] = { .type= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                .descriptorCount= 64 },
             }
         };
 
@@ -146,7 +146,7 @@ b8 vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_d
     return TRUE;
 }
 
-b8 _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
+b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
 {
     // Create instance
     VkApplicationInfo app_info =
@@ -262,7 +262,7 @@ b8 _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
     return TRUE;
 }
 
-b8 _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
+b8    _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
 {
     // Search suitable physical devices
     u32 physical_device_count = 0;
@@ -405,7 +405,10 @@ b8 _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
     return TRUE;
 }
 
-b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
+//TODO: Find a cleaner way to do this
+b8    _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image);
+
+b8    _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
 {
     VkSwapchainCreateInfoKHR sc_ci =
     {
@@ -414,9 +417,9 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
         .minImageCount    = ctx->swapchain_conf.image_count,
         .imageFormat      = ctx->swapchain_conf.swapchain_format.format,
         .imageColorSpace  = ctx->swapchain_conf.swapchain_format.colorSpace,
-        .imageExtent      = (VkExtent2D){ .width = extent.width,              .height   = extent.height },
+        .imageExtent      = (VkExtent2D){ .width = extent.width,                             .height= extent.height },
         .imageArrayLayers = 1,
-        .imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .preTransform     = ctx->swapchain_conf.capabilities.currentTransform,
         .compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -440,35 +443,26 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
 
     for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
-        VkImageViewCreateInfo view_ci =
-        {
-            .sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image      = ctx->swapchain.swapchain_images[i],
-            .viewType   = VK_IMAGE_VIEW_TYPE_2D,
-            .format     = ctx->swapchain_conf.swapchain_format.format,
-            .components =
-            {
-                .a = VK_COMPONENT_SWIZZLE_A,
-                .r = VK_COMPONENT_SWIZZLE_R,
-                .g = VK_COMPONENT_SWIZZLE_G,
-                .b = VK_COMPONENT_SWIZZLE_B,
-            },
-            .subresourceRange   =
-            {
-                .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseArrayLayer = 0,
-                .baseMipLevel   = 0,
-                .layerCount     = 1,
-                .levelCount     = 1,
-            },
-        };
-
-        VK_CHECKR(vkCreateImageView(ctx->vk_device, &view_ci, NULL, &ctx->swapchain.swapchain_image_views[i]), "Could not create an image view.");
-
         vc_priv_man_image img =
         {
-            .external = TRUE,
-            .image    = ctx->swapchain.swapchain_images[i],
+            .external   = TRUE,
+            .image      = ctx->swapchain.swapchain_images[i],
+            .allocation = VK_NULL_HANDLE,
+            .image_desc =
+            {
+                .image_dimension = 2,
+                .image_format    = ctx->swapchain_conf.swapchain_format.format,
+                .width           = ctx->swapchain_conf.swapchain_extent.width,
+                .height          = ctx->swapchain_conf.swapchain_extent.height,
+                .depth           = 1,
+                .mip_levels      = 1,
+                .layer_count     = 1,
+                .sample_count    = VK_SAMPLE_COUNT_1_BIT,
+                .image_usage     = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                .share           = FALSE,
+                .layout          = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            },
+            .full_image_view     = VK_NULL_HANDLE,
         };
         ctx->swapchain.swapchain_image_hndls[i] = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE, &img);
 
@@ -491,17 +485,15 @@ b8 _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
     vc_queue_wait_idle(ctx, VC_QUEUE_MAIN);
     vc_handle_destroy(ctx, cmd_buf);
 
-    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, NULL); // TODO: Image destruction
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, (vc_man_destroy_func)_vc_priv_image_destroy); //TODO: Find a cleaner way to do this
+
+    vc_swapchain_create_full_image_views(ctx); // NOTE: This might not be a good idea ...
     TRACE("Created swapchain image views.");
     return TRUE;
 }
 
-b8 _vc_priv_delete_swapchain(vc_ctx *ctx)
+b8    _vc_priv_delete_swapchain(vc_ctx   *ctx)
 {
-    for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
-    {
-        vkDestroyImageView(ctx->vk_device, ctx->swapchain.swapchain_image_views[i], NULL);
-    }
     vkDestroySwapchainKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, NULL);
 
     mem_free(ctx->swapchain.swapchain_image_views);
@@ -511,7 +503,7 @@ b8 _vc_priv_delete_swapchain(vc_ctx *ctx)
     return TRUE;
 }
 
-b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
+b8    _vc_priv_select_swapchain_configuration(vc_ctx   *ctx)
 {
     // Select swapchain format
     u32 format_count = 0;
@@ -521,13 +513,34 @@ b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
     vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, formats);
 
     /* ---------------- Swapchain format ---------------- */
-    ctx->swapchain_conf.swapchain_format = formats[0]; // Fallback
+    ctx->swapchain_conf.swapchain_format = formats[1]; // Fallback
+    b8 found_format = FALSE;
+    TRACE("Supported surface formats :");
     for (int i = 0; i < format_count; i++)
     {
-        if ( (formats[i].format == VK_FORMAT_R8G8B8A8_SRGB || formats[i].format == VK_FORMAT_R8G8B8A8_SNORM) && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
+        TRACE( "\t%s,", vc_priv_VkFormat_to_str(formats[i].format) );
+        if ( /*formats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||*/ formats[i].format == VK_FORMAT_B8G8R8A8_UNORM /* && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR */ )
         {
-            ctx->swapchain_conf.swapchain_format = formats[i];
+            //ctx->swapchain_conf.swapchain_format = formats[i];
+            found_format = TRUE;
         }
+    }
+
+    if(!found_format)
+    {
+        ERROR(
+            "Not found requested format, using fallback format : format=%s, color_space=%s",
+            vc_priv_VkFormat_to_str(ctx->swapchain_conf.swapchain_format.format),
+            vc_priv_VkColorSpaceKHR_to_str(ctx->swapchain_conf.swapchain_format.colorSpace)
+            );
+    }
+    else
+    {
+        TRACE(
+            "Found a format for the swapchain : format=%s, color_space=%s",
+            vc_priv_VkFormat_to_str(ctx->swapchain_conf.swapchain_format.format),
+            vc_priv_VkColorSpaceKHR_to_str(ctx->swapchain_conf.swapchain_format.colorSpace)
+            );
     }
     mem_free(formats);
 
@@ -588,12 +601,15 @@ b8 _vc_priv_select_swapchain_configuration(vc_ctx *ctx)
     {
         WARN("No possible depth format found.");
     }
-    TRACE("Depth format: %d", ctx->swapchain_conf.depth_format);
+    TRACE(
+        "Depth format: %s",
+        vc_priv_VkFormat_to_str(ctx->swapchain_conf.depth_format)
+        );
 
     return TRUE;
 }
 
-i32 _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
+i32    _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
     for (int i = 0; i < prop_count; i++)
     {
@@ -605,7 +621,7 @@ i32 _vc_priv_search_main_queue(VkQueueFamilyProperties *props, u32 prop_count)
     return -1;
 }
 
-i32 _vc_priv_search_dedicated_compute_queue(VkQueueFamilyProperties *props, u32 prop_count)
+i32    _vc_priv_search_dedicated_compute_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
     // Searches a dedicated compute
     for (int i = 0; i < prop_count; i++)
@@ -618,7 +634,7 @@ i32 _vc_priv_search_dedicated_compute_queue(VkQueueFamilyProperties *props, u32 
     return -1;
 }
 
-i32 _vc_priv_search_dedicated_transfer_queue(VkQueueFamilyProperties *props, u32 prop_count)
+i32    _vc_priv_search_dedicated_transfer_queue(VkQueueFamilyProperties *props, u32 prop_count)
 {
     // Searches a dedicated transfer queue
     for (int i = 0; i < prop_count; i++)
@@ -631,7 +647,7 @@ i32 _vc_priv_search_dedicated_transfer_queue(VkQueueFamilyProperties *props, u32
     return -1;
 }
 
-i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
+i32    _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
 {
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_count, NULL);
@@ -661,7 +677,7 @@ i32 _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhy
     return queue_id;
 }
 
-b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
+b8    _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
 {
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(phys_device, &props);
@@ -685,7 +701,7 @@ b8 _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query
     return TRUE;
 }
 
-b8 _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
+b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
 {
     // Select extent
     u32 width  = 0;
@@ -704,7 +720,7 @@ b8 _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
     return TRUE;
 }
 
-b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx)
+b8    _vc_priv_setup_default_swapchain(vc_ctx   *ctx)
 {
     if (!ctx->use_windowing)
     {
@@ -714,18 +730,27 @@ b8 _vc_priv_setup_default_swapchain(vc_ctx *ctx)
     INFO("Selecting swapchain configuration");
 
     _vc_priv_select_swapchain_configuration(ctx);
-    VkExtent2D swp_extent;
+    VkExtent2D swp_extent =
+    {
+        0
+    };
     _vc_priv_get_optimal_swapchain_size(ctx, &swp_extent);
+    INFO("Create swapchain with extent of %ux%u", swp_extent.width, swp_extent.height);
     _vc_priv_create_swapchain(ctx, swp_extent);
     return TRUE;
 }
 
-vc_image *vc_swapchain_get_image_hndls(vc_ctx *ctx)
+vc_image   *vc_swapchain_get_image_hndls(vc_ctx   *ctx)
 {
     return ctx->swapchain.swapchain_image_hndls;
 }
 
-void vc_destroy_ctx(vc_ctx *ctx)
+u32         vc_swapchain_image_count(vc_ctx   *ctx)
+{
+    return ctx->swapchain.swapchain_image_count;
+}
+
+void        vc_destroy_ctx(vc_ctx   *ctx)
 {
     vkDeviceWaitIdle(ctx->vk_device);
     TRACE("Destroying vc context.");
@@ -771,23 +796,23 @@ void vc_destroy_ctx(vc_ctx *ctx)
     vkDestroyInstance(ctx->vk_instance, NULL);
 }
 
-void vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
+void    vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
 {
     vc_handle_mgr_free(&ctx->handle_manager, hndl, ctx);
 }
 
-void vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)
+void    vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)
 {
     vkQueueWaitIdle(ctx->queues.queues[type]);
 }
 
-void vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
+void    vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
 {
     vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore);
     vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, sem->semaphore, VK_NULL_HANDLE, image_id);
 }
 
-void vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
+void    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
 {
     vkQueuePresentKHR(
         ctx->queues.queues[VC_QUEUE_MAIN],
@@ -800,4 +825,13 @@ void vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
 
         }
         );
+}
+
+void    vc_swapchain_create_full_image_views(vc_ctx   *ctx)
+{
+    u32 count = vc_swapchain_image_count(ctx);
+    for(int i = 0; i < count; i++)
+    {
+        vc_image_create_full_image_view(ctx, vc_swapchain_get_image_hndls(ctx)[i]);
+    }
 }

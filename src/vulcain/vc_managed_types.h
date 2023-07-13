@@ -7,46 +7,51 @@
 
 typedef struct
 {
-    pipeline_type    type;
-    VkPipeline       pipeline;
-    VkPipelineLayout layout;
+    pipeline_type       type;
+    VkPipeline          pipeline;
+    VkPipelineLayout    layout;
 } vc_priv_man_compute_pipe;
 
 typedef struct
 {
-    VkCommandBuffer command_buffer;
-    VkCommandPool   pool;
-    vc_queue_type   queue_type;
+    VkCommandBuffer    command_buffer;
+    VkCommandPool      pool;
+    vc_queue_type      queue_type;
 } vc_priv_man_command_buffer;
 
 typedef struct
 {
-    VkSemaphore semaphore;
+    VkSemaphore    semaphore;
 } vc_priv_man_semaphore;
 
 typedef struct
 {
-    b8            external; // Wether or not the image is managed by an external system (e.g. swapchain)
-    VkImage       image;
-    VmaAllocation allocation;
+    VkImage              image;
+    VmaAllocation        allocation;
+
+    b8                   external; // Wether or not the image is managed by an external system (e.g. swapchain)
+
+    VkImageView          full_image_view; // Image view taking the full subressource range
+
+    image_create_desc    image_desc;
 } vc_priv_man_image;
 
 typedef struct
 {
-    VkDescriptorSetLayout set_layout;
-    u64                   hash;
+    VkDescriptorSetLayout    set_layout;
+    u64                      hash;
 } vc_priv_man_descriptor_set_layout;
 
 typedef struct
 {
-    u64             layout_hash;
-    VkDescriptorSet set;
+    u64                layout_hash;
+    VkDescriptorSet    set;
 } vc_priv_man_descriptor_set;
 
 typedef struct
 {
-    VkBuffer          buffer;
-    VmaAllocation     allocation;
-    memory_visibility memory_visibility;
-    u64               size;
+    VkBuffer             buffer;
+    VmaAllocation        allocation;
+    memory_visibility    memory_visibility;
+    u64                  size;
 } vc_priv_man_buffer;

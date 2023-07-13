@@ -3,15 +3,15 @@
 #include "vulcain.h"
 #include <vulkan/vulkan_core.h>
 
-b8 _vc_priv_semaphore_destroy(vc_ctx *ctx, vc_priv_man_semaphore *sem)
+b8              _vc_priv_semaphore_destroy(vc_ctx *ctx, vc_priv_man_semaphore *sem)
 {
     vkDestroySemaphore(ctx->vk_device, sem->semaphore, NULL);
     return TRUE;
 }
 
-vc_semaphore vc_semaphore_create(vc_ctx *ctx)
+vc_semaphore    vc_semaphore_create(vc_ctx   *ctx)
 {
-    VkSemaphoreCreateInfo sem_ci = 
+    VkSemaphoreCreateInfo sem_ci =
     {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
