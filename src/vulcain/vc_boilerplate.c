@@ -4,6 +4,8 @@
 #include "vulcain.h"
 #include <vulkan/vulkan_core.h>
 
+//TODO: Cut this file into smaller parts
+
 static const char * const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
 b8                                       _vc_priv_setup_default_swapchain(vc_ctx   *ctx);
@@ -69,7 +71,8 @@ u64    _vc_priv_u64_hash_id(void *obj, u64 size)
 b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
     hashmap_create(&ctx->desc_set_layouts_hashmap, 17, sizeof(u64), sizeof(vc_descriptor_set_layout), _vc_priv_u64_hash_id);
-    // TODO: Make this configurable
+
+    // TODO: Make this configurable, or allow handle pools to be resizable (need to modify the base layer for that)
     vc_handle_mgr_create(
         &ctx->handle_manager,
         (vc_handle_mgr_counts){
@@ -80,6 +83,8 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
             [VC_HANDLE_BUFFER]                = 64,
             [VC_HANDLE_DESCRIPTOR_SET_LAYOUT] = 64,
             [VC_HANDLE_DESCRIPTOR_SET]        = 128,
+            [VC_HANDLE_RENDER_PASS]           = 16,
+            [VC_HANDLE_FRAMEBUFFER]           = 32,
         }
         );
 
@@ -796,23 +801,23 @@ void        vc_destroy_ctx(vc_ctx   *ctx)
     vkDestroyInstance(ctx->vk_instance, NULL);
 }
 
-void    vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
+void          vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
 {
     vc_handle_mgr_free(&ctx->handle_manager, hndl, ctx);
 }
 
-void    vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)
+void          vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type)
 {
     vkQueueWaitIdle(ctx->queues.queues[type]);
 }
 
-void    vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
+void          vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
 {
     vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore);
     vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, sem->semaphore, VK_NULL_HANDLE, image_id);
 }
 
-void    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
+void          vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
 {
     vkQueuePresentKHR(
         ctx->queues.queues[VC_QUEUE_MAIN],
@@ -827,11 +832,26 @@ void    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
         );
 }
 
-void    vc_swapchain_create_full_image_views(vc_ctx   *ctx)
+void          vc_swapchain_create_full_image_views(vc_ctx   *ctx)
 {
     u32 count = vc_swapchain_image_count(ctx);
     for(int i = 0; i < count; i++)
     {
         vc_image_create_full_image_view(ctx, vc_swapchain_get_image_hndls(ctx)[i]);
     }
+
 }
+
+inline u32    vc_u32_flags_set_bits(u32    flag)
+{
+    u32 count = 0;
+    do
+    {
+        count += flag & 1;
+    }
+    while(flag >>= 1);
+    return count;
+}
+
+void    vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_flags flags, u32 *ids)
+{ }

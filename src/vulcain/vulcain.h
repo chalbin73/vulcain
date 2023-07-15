@@ -78,7 +78,123 @@ typedef enum
 {
     VC_PIPELINE_TYPE_COMPUTE = 1,
     VC_PIPELINE_TYPE_GRAPHICS,
-} pipeline_type;
+} vc_pipeline_type;
+
+/* ---------------- Graphics/Render pass/Frambuffer ---------------- */
+
+/**
+ * @brief Represents a set of attachments, that will be used during a rendering process
+ *
+ */
+typedef struct
+{
+    u32         attachment_count;
+    vc_image   *attachments;
+} render_attachments_set;
+
+
+/**
+ * @brief Used to reference a renderpass attatchment from a subpass
+ * @deprecated VkAttachmentReference is used now, as it fullfills this part
+ */
+typedef struct
+{
+    /** @brief The index of the attachement in the attachment set */
+    u32              id;
+    /** @brief The layout in which the attachment shall be transitioned to for this subpass */
+    VkImageLayout    layout;
+} subpass_attachment_reference;
+
+/**
+ * @brief Gives the necessary parameters for an attachment when creating a render pass
+ *
+ */
+typedef struct
+{
+    VkAttachmentLoadOp     load_op;
+    VkAttachmentStoreOp    store_op;
+
+    VkAttachmentLoadOp     stencil_load_op;
+    VkAttachmentStoreOp    stencil_store_op;
+
+    /** @brief The layout in which the image will be upon entering the render pass */
+    VkImageLayout          initial_layout;
+    /** @brief The layout in which the image shall be upon exiting the render pass */
+    VkImageLayout          final_layout;
+} render_pass_attachment_params;
+
+/**
+ * @brief Describes a single subpass
+ *
+ */
+typedef struct
+{
+    vc_pipeline_type         pipline_type;
+
+    u32                      input_attachment_count;
+    VkAttachmentReference   *input_attachment_refs;
+
+    u32                      color_attachment_count;
+    VkAttachmentReference   *color_attachment_refs;
+
+    u32                      preserve_attachment_count;
+    u32                     *preserve_attachment_ids;
+
+    VkAttachmentReference   *depth_stencil_attachment_ref;
+
+} subpass_desc;
+
+/**
+ * @brief Describes a single subpass dependency
+ *
+ */
+typedef struct
+{
+    /** @brief The id of the subpass @code{dst_id} depends on, or VK_SUBPASS_EXTERNAL */
+    u32                        src_id;
+
+    /** @brief The id of the subpass, or VK_SUBPASS_EXTERNAL which depends on @code{src_id} */
+    u32                        dst_id;
+
+    /** @brief The stages that need to be executed before execution is unlocked on destination subpass */
+    VkPipelineStageFlagBits    src_stages;
+
+    /** @brief The stages that are allowed to be executed before the source subpass stages */
+    VkPipelineStageFlagBits    dst_stages;
+
+    /** @brief Accesses that shall made be available */
+    VkAccessFlags              src_access;
+
+    /** @brief Access to which memory writes (including src_accesses) must be made available to */
+    VkAccessFlags              dst_access;
+} subpass_dependency_desc;
+
+/**
+ * @brief Describes the creation of a vulkan render pass
+ *
+ */
+typedef struct
+{
+    render_attachments_set           attachment_set;
+
+    /** @brief Parameters for each of the attachment in the attchment set, indexed in the same way */
+    render_pass_attachment_params   *attachment_desc;
+
+    u32                              subpass_count;
+    /** @brief Defines a subpass */
+    subpass_desc                    *subpasses_desc;
+
+    u32                              subpass_dependency_count;
+    subpass_dependency_desc         *subpass_dependencies;
+
+} render_pass_desc;
+
+typedef struct
+{
+    vc_render_pass            render_pass;
+    render_attachments_set    attachment_set;
+    u32                       layers; // Not sure about this one
+} framebuffer_desc;
 
 /**
  * @brief Describes the creation of a vulkan compute pipeline
@@ -122,6 +238,8 @@ typedef struct
     b8                       require_device_local;
     VkBufferUsageFlagBits    buffer_usage;
     u64                      size;
+    b8                       share;
+    vc_queue_flags           queues;
 } buffer_alloc_desc;
 
 /**
@@ -266,9 +384,10 @@ typedef struct
 } vc_ctx;
 
 /* ---------------- Enum helpers ---------------- */
-const char   *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_value);
-const char   *vc_priv_VkFormat_to_str(VkFormat    input_value);
-const char   *vc_priv_VkResult_to_str(VkResult    input_value);
+const char            *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_value);
+const char            *vc_priv_VkFormat_to_str(VkFormat    input_value);
+const char            *vc_priv_VkResult_to_str(VkResult    input_value);
+VkPipelineBindPoint    vc_priv_pipeline_type_to_bind_point(vc_pipeline_type    type);
 
 /* ---------------- Error checking ---------------- */
 #define VK_CHECK(s, m)                                                                                                 \
@@ -544,8 +663,8 @@ void                        vc_command_image_pipe_barrier(vc_ctx                
 //TODO: Get rid of this function here
 /**
  * @brief <PRIVATE FUNC> Creates, or reuses a descriptor set layout based on the info
- * 
- * @param ctx 
+ *
+ * @param ctx
  * @param ci The create info
  * @return vc_descriptor_set_layout Handle to set layout
  */
@@ -555,8 +674,8 @@ vc_descriptor_set_layout    vc_priv_desc_set_layout_get(vc_ctx *ctx, VkDescripto
 
 /**
  * @brief Allocates a buffer
- * 
- * @param ctx 
+ *
+ * @param ctx
  * @param alloc_desc The allocation parameters
  * @return vc_buffer A handle to the buffer
  */
@@ -566,20 +685,42 @@ vc_buffer                   vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc al
 
 /**
  * @brief Allocates an image
- * 
- * @param ctx 
- * @param desc Descripion of the image 
+ *
+ * @param ctx
+ * @param desc Descripion of the image
  * @return vc_image A handle to the imaage
  */
 vc_image                    vc_image_allocate(vc_ctx *ctx, image_create_desc desc);
 
 /**
  * @brief Creates the full image view for an image, that is, the image view viewing the full subRessources of the image (the one most commonly used)
- * 
- * @param ctx 
+ *
+ * @param ctx
  * @param img The image on which to setup the full image view
  * @note The image object handle by @c{vc_image} contains a default image view (setup by this function)
  */
 void                        vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
 
+/* ---------------- Graphics ---------------- */
+/* ---------------- Render pass ---------------- */
+vc_render_pass              vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
+
 /* ---------------- Utils ---------------- */
+
+
+/**
+ * @brief Converts a set of vc_queue_flags to a list of queue indices according to the set bits
+ *
+ * @param ctx
+ * @param flags The flags
+ * @param[out] ids A pointer to a allocated emptly list of u32s
+ */
+void                        vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_flags flags, u32 *ids);
+
+/**
+ * @brief Returns the number of set bits in a flag
+ *
+ * @param flag The flag
+ * @returns u32 The number of set bits in flag
+ */
+u32                         vc_u32_flags_set_bits(u32    flag);

@@ -653,3 +653,16 @@ const char   *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_value)
         return "Unhandled VkColorSpaceKHR";
     }
 }
+
+inline VkPipelineBindPoint    vc_priv_pipeline_type_to_bind_point(vc_pipeline_type    type)
+{
+    switch (type)
+    {
+    case VC_PIPELINE_TYPE_COMPUTE:
+        return VK_PIPELINE_BIND_POINT_COMPUTE;
+    case VC_PIPELINE_TYPE_GRAPHICS:
+        return VK_PIPELINE_BIND_POINT_GRAPHICS;
+    default:
+        return 0;
+    }
+}

@@ -45,9 +45,7 @@ int    main(i32 argc, char **argv)
         }
         );
 
-
-
-//    vkGetPhysicalDeviceFormatProperties(ctx.vk_selected_physical_device, VK_FORMAT_A2B10G10R10_SNORM_PACK32, VkFormatProperties *pFormatProperties)
+    //    vkGetPhysicalDeviceFormatProperties(ctx.vk_selected_physical_device, VK_FORMAT_A2B10G10R10_SNORM_PACK32, VkFormatProperties *pFormatProperties)
 
     // vc_buffer buffer = vc_buffer_allocate(
     //     &ctx,
@@ -73,18 +71,72 @@ int    main(i32 argc, char **argv)
     //     }
     //     );
 
+    render_attachments_set render_att =
+    {
+        .attachment_count = 1,
+        .attachments      = (vc_image[1]){ vc_swapchain_get_image_hndls(&ctx)[0] }
+    };
+
+    vc_render_pass pass = vc_render_pass_create(
+        &ctx,
+        (render_pass_desc)
+        {
+            .attachment_set = render_att,
+
+            .attachment_desc = (render_pass_attachment_params[1])
+            {
+                [0] =
+                {
+                    .load_op  = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .store_op = VK_ATTACHMENT_STORE_OP_STORE,
+
+                    .stencil_load_op  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    .stencil_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+
+                    .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .final_layout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                }
+            },
+
+            .subpass_count  = 1,
+            .subpasses_desc = (subpass_desc[1])
+            {
+                [0] =
+                {
+                    .pipline_type                 = VC_PIPELINE_TYPE_GRAPHICS,
+                    .input_attachment_count       = 0,
+                    .color_attachment_count       = 1,
+                    .color_attachment_refs        = &(VkAttachmentReference){ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+                    .preserve_attachment_count    = 0,
+                    .depth_stencil_attachment_ref = NULL,
+                }
+            },
+
+            .subpass_dependency_count = 1,
+            .subpass_dependencies     = &(subpass_dependency_desc)
+            {
+                .src_id = VK_SUBPASS_EXTERNAL,
+                .dst_id = 0,
+
+                .src_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dst_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+
+                .src_access = 0,
+                .dst_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            }
+        }
+        );
+    (void)pass;
+
     descriptor_set_desc descriptor_desc =
     {
         .binding_count = 1,
-        .bindings      = (descriptor_binding_desc[1])
-        {
-            [0] = (descriptor_binding_desc)
-            {
+        .bindings      = (descriptor_binding_desc[1]){
+            [0] = (descriptor_binding_desc){
                 .descriptor_type  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                 .descriptor_count = 1,
                 .stage_flags      = VK_SHADER_STAGE_COMPUTE_BIT,
-                .image_info       = &(descriptor_binding_image)
-                { 0 },
+                .image_info       = &(descriptor_binding_image){ 0 },
             }
         }
     };
@@ -92,7 +144,7 @@ int    main(i32 argc, char **argv)
     vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, descriptor_desc);
     vc_descriptor_set sets[vc_swapchain_image_count(&ctx)];
 
-    for(int i = 0; i < vc_swapchain_image_count(&ctx); i++)
+    for (int i = 0; i < vc_swapchain_image_count(&ctx); i++)
     {
         descriptor_desc.bindings[0].image_info = &(descriptor_binding_image)
         {

@@ -36,6 +36,8 @@ typedef enum
     VC_HANDLE_BUFFER,
     VC_HANDLE_DESCRIPTOR_SET_LAYOUT,
     VC_HANDLE_DESCRIPTOR_SET,
+    VC_HANDLE_RENDER_PASS,
+    VC_HANDLE_FRAMEBUFFER,
     VC_HANDLE_TYPE_COUNT
 } vc_handle_type;
 
@@ -49,6 +51,8 @@ VC_DEF_HANDLE(vc_image);
 VC_DEF_HANDLE(vc_buffer);
 VC_DEF_HANDLE(vc_descriptor_set_layout);
 VC_DEF_HANDLE(vc_descriptor_set);
+VC_DEF_HANDLE(vc_render_pass);
+VC_DEF_HANDLE(vc_framebuffer);
 
 // Unpacks the two 32 bits part of the handle
 typedef union
