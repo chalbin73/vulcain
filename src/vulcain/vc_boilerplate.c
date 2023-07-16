@@ -77,6 +77,7 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
         &ctx->handle_manager,
         (vc_handle_mgr_counts){
             [VC_HANDLE_COMPUTE_PIPE]          = 64,
+            [VC_HANDLE_GRAPHICS_PIPE]         = 32,
             [VC_HANDLE_COMMAND_BUFFER]        = 16,
             [VC_HANDLE_SEMAPHORE]             = 32,
             [VC_HANDLE_IMAGE]                 = 64,

@@ -11,6 +11,7 @@ GLFWwindow *window;
 
 int    main(i32 argc, char **argv)
 {
+    INFO("/* ---------------- START ---------------- */");
     INFO("Hello, World ! Welcome to vulcain !");
 
     glfwInit();
@@ -19,6 +20,8 @@ int    main(i32 argc, char **argv)
     glfwShowWindow(window);
     u32 exts_count    = 0;
     const char **exts = glfwGetRequiredInstanceExtensions(&exts_count);
+
+    timer t = TIMER_START();
 
     vc_ctx ctx =
     {
@@ -128,6 +131,61 @@ int    main(i32 argc, char **argv)
         );
     (void)pass;
 
+    vc_framebuffer fb = vc_framebuffer_create(
+        &ctx,
+        (framebuffer_desc)
+        {
+            .attachment_set = render_att,
+            .render_pass    = pass,
+            .layers         = 1,
+        }
+        );
+    (void)fb;
+
+    graphics_pipeline_code_desc code;
+    code.vertex_code          = fio_read_whole_file("shaders/a.vert.spv", &code.vertex_code_size);
+    code.vertex_entry_point   = "main";
+    code.fragment_code        = fio_read_whole_file("shaders/a.frag.spv", &code.fragment_code_size);
+    code.fragment_entry_point = "main";
+
+
+    vc_graphics_pipe graphics_pipe = vc_graphics_pipe_create(
+        &ctx,
+        (graphics_pipeline_desc)
+        {
+            .shader_code                = code,
+            .set_layout_count           = 0,
+            .render_pass                = pass,
+            .subpass_index              = 0,
+            .vertex_input_binding_count = 0,
+            .topology                   = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .line_width                 = 1.0f,
+            .viewport_scissor_count     = 1,
+            .depth_test                 = FALSE,
+            .stencil_test               = FALSE,
+            .enable_depth_clamp         = FALSE,
+            .enable_depth_bias          = FALSE,
+            .sample_count               = VK_SAMPLE_COUNT_1_BIT,
+            .sample_shading             = FALSE,
+            .attchment_count            = 1,
+            .attchment_blends           = &(VkPipelineColorBlendAttachmentState)
+            {
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+                .colorBlendOp        = VK_BLEND_OP_ADD,
+                .alphaBlendOp        = VK_BLEND_OP_ADD,
+                .blendEnable         = VK_TRUE,
+                .colorWriteMask      = VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
+            },
+            .blend_constants     = { 1, 1, 1, 1 },
+            .dynamic_state_count = 2,
+            .dynamic_states      = (VkDynamicState[2]){ VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT },
+        }
+        );
+    (void)graphics_pipe;
+
     descriptor_set_desc descriptor_desc =
     {
         .binding_count = 1,
@@ -171,6 +229,9 @@ int    main(i32 argc, char **argv)
 
     (void)buf;
     (void)pipe;
+
+    TIMER_LOG(t, "Vulkan init");
+
     while ( !glfwWindowShouldClose(window) )
     {
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);

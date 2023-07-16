@@ -189,12 +189,109 @@ typedef struct
 
 } render_pass_desc;
 
+/**
+ * @brief Describes a framebuffer
+ *
+ */
 typedef struct
 {
     vc_render_pass            render_pass;
     render_attachments_set    attachment_set;
     u32                       layers; // Not sure about this one
 } framebuffer_desc;
+
+typedef struct
+{
+    /** @brief The format of the attribute */
+    VkFormat    format;
+    /** @brief The number of byte between the start of the attribute and the start of the binding */
+    u32         offset;
+} graphics_pipeline_in_attrib;
+
+typedef struct
+{
+    /** @brief The byte stride between consecutive elements within the buffer */
+    u32                            stride;
+    u32                            attribute_count;
+    graphics_pipeline_in_attrib   *attributes;
+
+    VkVertexInputRate              input_rate;
+} graphics_pipeline_in_binding;
+
+/**
+ * @brief Describes the shaders used in a graphical pipeline
+ *
+ */
+typedef struct
+{
+    u8           *vertex_code;
+    u64           vertex_code_size;
+    const char   *vertex_entry_point; // Null terminated
+
+    u8           *fragment_code;
+    u64           fragment_code_size;
+    const char   *fragment_entry_point; // Null terminated
+} graphics_pipeline_code_desc;
+
+/**
+ * @brief Describes the creation of a graphical pipeline
+ * TODO: Document this struct's fields
+ */
+typedef struct
+{
+
+    graphics_pipeline_code_desc            shader_code;
+
+    u32                                    set_layout_count;
+    vc_descriptor_set_layout              *set_layouts;
+
+    vc_render_pass                         render_pass;
+    u32                                    subpass_index;
+
+    u32                                    vertex_input_binding_count;
+    graphics_pipeline_in_binding          *vertex_input_bindings;
+
+    VkPrimitiveTopology                    topology;
+
+    // Ignored if dynamic
+    u32                                    viewport_scissor_count;
+    VkViewport                            *viewports;
+    VkRect2D                              *scissors;
+
+    b8                                     depth_test;
+    b8                                     depth_write;
+    VkCompareOp                            depth_compare_op;
+    b8                                     depth_bound_test_enable;
+    f32                                    depth_bounds_min;
+    f32                                    depth_bounds_max;
+
+    b8                                     stencil_test;
+    VkStencilOpState                       front_faces_stencil_op;
+    VkStencilOpState                       back_faces_stencil_op;
+
+    b8                                     enable_depth_clamp;
+    VkPolygonMode                          polygon_mode;
+    VkCullModeFlagBits                     cull_mode;
+    VkFrontFace                            front_face;
+    f32                                    line_width;
+
+    b8                                     enable_depth_bias;
+    f32                                    depth_bias_clamp;
+    f32                                    depth_bias_constant;
+    f32                                    depth_bias_slope;
+
+    VkSampleCountFlagBits                  sample_count;
+    b8                                     sample_shading;
+    f32                                    sample_shading_min_factor;
+
+    u32                                    attchment_count;
+    VkPipelineColorBlendAttachmentState   *attchment_blends;
+    f32                                    blend_constants[4];
+
+    u32                                    dynamic_state_count;
+    VkDynamicState                        *dynamic_states;
+
+} graphics_pipeline_desc;
 
 /**
  * @brief Describes the creation of a vulkan compute pipeline
@@ -704,6 +801,12 @@ void                        vc_image_create_full_image_view(vc_ctx *ctx, vc_imag
 /* ---------------- Graphics ---------------- */
 /* ---------------- Render pass ---------------- */
 vc_render_pass              vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
+
+/* ---------------- Framebuffer ---------------- */
+vc_framebuffer              vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc);
+
+/* ---------------- Graphics Pipeline ---------------- */
+vc_graphics_pipe            vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc desc);
 
 /* ---------------- Utils ---------------- */
 

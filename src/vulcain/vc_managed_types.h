@@ -7,10 +7,23 @@
 
 typedef struct
 {
+    // Struct header
     vc_pipeline_type    type;
+
+    // Contents
     VkPipeline          pipeline;
     VkPipelineLayout    layout;
 } vc_priv_man_compute_pipe;
+
+typedef struct
+{
+    // Struct header
+    vc_pipeline_type    type;
+
+    // Contents
+    VkPipeline          pipeline;
+    VkPipelineLayout    layout;
+} vc_priv_man_graphics_pipe;
 
 typedef struct
 {

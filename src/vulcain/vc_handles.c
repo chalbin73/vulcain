@@ -6,6 +6,7 @@ b8    vc_handle_mgr_create(vc_handle_mgr *mgr, vc_handle_mgr_counts counts)
     static const vc_handle_mgr_counts managed_sizes =
     {
         [VC_HANDLE_COMPUTE_PIPE]          = sizeof(vc_priv_man_compute_pipe),
+        [VC_HANDLE_GRAPHICS_PIPE]         = sizeof(vc_priv_man_graphics_pipe),
         [VC_HANDLE_COMMAND_BUFFER]        = sizeof(vc_priv_man_command_buffer),
         [VC_HANDLE_SEMAPHORE]             = sizeof(vc_priv_man_semaphore),
         [VC_HANDLE_IMAGE]                 = sizeof(vc_priv_man_image),
