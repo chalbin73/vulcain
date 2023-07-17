@@ -152,6 +152,8 @@ const char   *vc_handle_type_to_str(vc_handle_type    type)
     {
     case VC_HANDLE_COMPUTE_PIPE:
         return "VC_HANDLE_COMPUTE_PIPE";
+    case VC_HANDLE_GRAPHICS_PIPE:
+        return "VC_HANDLE_GRAPHICS_PIPE";
     case VC_HANDLE_COMMAND_BUFFER:
         return "VC_HANDLE_COMMAND_BUFFER";
     case VC_HANDLE_SEMAPHORE:
@@ -164,7 +166,15 @@ const char   *vc_handle_type_to_str(vc_handle_type    type)
         return "VC_HANDLE_DESCRIPTOR_SET_LAYOUT";
     case VC_HANDLE_DESCRIPTOR_SET:
         return "VC_HANDLE_DESCRIPTOR_SET";
-    default:
-        return "Unknown handle type";
+    case VC_HANDLE_RENDER_PASS:
+        return "VC_HANDLE_RENDER_PASS";
+    case VC_HANDLE_FRAMEBUFFER:
+        return "VC_HANDLE_FRAMEBUFFER";
+
+
+    case VC_HANDLE_TYPE_COUNT:
+        break;
+
     }
+    return "Unknown handle type";
 }

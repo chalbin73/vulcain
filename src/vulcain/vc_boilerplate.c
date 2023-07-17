@@ -423,9 +423,9 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
         .minImageCount    = ctx->swapchain_conf.image_count,
         .imageFormat      = ctx->swapchain_conf.swapchain_format.format,
         .imageColorSpace  = ctx->swapchain_conf.swapchain_format.colorSpace,
-        .imageExtent      = (VkExtent2D){ .width = extent.width,                             .height= extent.height },
+        .imageExtent      = (VkExtent2D){ .width = extent.width,              .height= extent.height },
         .imageArrayLayers = 1,
-        .imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        .imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, //TODO: Expose this
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .preTransform     = ctx->swapchain_conf.capabilities.currentTransform,
         .compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -519,19 +519,19 @@ b8    _vc_priv_select_swapchain_configuration(vc_ctx   *ctx)
     vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, formats);
 
     /* ---------------- Swapchain format ---------------- */
-    ctx->swapchain_conf.swapchain_format = formats[1]; // Fallback
+    ctx->swapchain_conf.swapchain_format = formats[0]; // Fallback
     b8 found_format = FALSE;
     TRACE("Supported surface formats :");
     for (int i = 0; i < format_count; i++)
     {
-        TRACE( "\t%s,", vc_priv_VkFormat_to_str(formats[i].format) );
-        if ( /*formats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||*/ formats[i].format == VK_FORMAT_B8G8R8A8_UNORM /* && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR */ )
+        TRACE( "\t%s - %s,", vc_priv_VkFormat_to_str(formats[i].format), vc_priv_VkColorSpaceKHR_to_str(formats[i].colorSpace) );
+        if ( (formats[i].format == VK_FORMAT_B8G8R8A8_SRGB || formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
         {
-            //ctx->swapchain_conf.swapchain_format = formats[i];
-            found_format = TRUE;
+            ctx->swapchain_conf.swapchain_format = formats[i];
+            found_format                         = TRUE;
+            break;
         }
     }
-
     if(!found_format)
     {
         ERROR(

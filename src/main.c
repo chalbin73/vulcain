@@ -48,31 +48,6 @@ int    main(i32 argc, char **argv)
         }
         );
 
-    //    vkGetPhysicalDeviceFormatProperties(ctx.vk_selected_physical_device, VK_FORMAT_A2B10G10R10_SNORM_PACK32, VkFormatProperties *pFormatProperties)
-
-    // vc_buffer buffer = vc_buffer_allocate(
-    //     &ctx,
-    //     (buffer_alloc_desc){
-    //         .buffer_usage         = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //         .require_device_local = TRUE,
-    //         .require_host_visible = TRUE,
-    //         .size                 = sizeof(f32),
-    //     }
-    //     );
-
-    // vc_image img = vc_image_allocate(
-    //     &ctx,
-    //     (image_create_desc){
-    //         .image_dimension = 2,
-    //         .image_format    = VK_FORMAT_R8G8B8A8_UINT,
-    //         .width           = 1916,
-    //         .height          = 1036,
-    //         .depth           = 1,
-    //         .image_usage     = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-    //         .share           = FALSE,
-    //         .layout          = VK_IMAGE_LAYOUT_GENERAL,
-    //     }
-    //     );
 
     render_attachments_set render_att =
     {
@@ -131,16 +106,25 @@ int    main(i32 argc, char **argv)
         );
     (void)pass;
 
-    vc_framebuffer fb = vc_framebuffer_create(
-        &ctx,
-        (framebuffer_desc)
+    vc_framebuffer frambuffers[vc_swapchain_image_count(&ctx)];
+    for(int i = 0; i < vc_swapchain_image_count(&ctx); i++)
+    {
+        render_attachments_set render_att =
         {
-            .attachment_set = render_att,
-            .render_pass    = pass,
-            .layers         = 1,
-        }
-        );
-    (void)fb;
+            .attachment_count = 1,
+            .attachments      = (vc_image[1]){ vc_swapchain_get_image_hndls(&ctx)[i] }
+        };
+
+        frambuffers[i] = vc_framebuffer_create(
+            &ctx,
+            (framebuffer_desc)
+            {
+                .attachment_set = render_att,
+                .render_pass    = pass,
+                .layers         = 1,
+            }
+            );
+    }
 
     graphics_pipeline_code_desc code;
     code.vertex_code          = fio_read_whole_file("shaders/a.vert.spv", &code.vertex_code_size);
@@ -186,49 +170,9 @@ int    main(i32 argc, char **argv)
         );
     (void)graphics_pipe;
 
-    descriptor_set_desc descriptor_desc =
-    {
-        .binding_count = 1,
-        .bindings      = (descriptor_binding_desc[1]){
-            [0] = (descriptor_binding_desc){
-                .descriptor_type  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                .descriptor_count = 1,
-                .stage_flags      = VK_SHADER_STAGE_COMPUTE_BIT,
-                .image_info       = &(descriptor_binding_image){ 0 },
-            }
-        }
-    };
-
-    vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, descriptor_desc);
-    vc_descriptor_set sets[vc_swapchain_image_count(&ctx)];
-
-    for (int i = 0; i < vc_swapchain_image_count(&ctx); i++)
-    {
-        descriptor_desc.bindings[0].image_info = &(descriptor_binding_image)
-        {
-            .layout = VK_IMAGE_LAYOUT_GENERAL,
-            .image  = vc_swapchain_get_image_hndls(&ctx)[i],
-        };
-        sets[i] = vc_descriptor_set_create(&ctx, descriptor_desc, set_layout);
-    }
-    u64 source_size      = 0;
-    u8 *source           = fio_read_whole_file("shaders/test.comp.spv", &source_size);
-    vc_compute_pipe pipe = vc_compute_pipe_create(
-        &ctx,
-        &(compute_pipe_desc){
-            .shader_code_length = source_size,
-            .shader_code        = source,
-            .set_layout         = set_layout,
-        }
-        );
-
-    vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_COMPUTE);
+    vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_MAIN);
 
     vc_semaphore sem = vc_semaphore_create(&ctx);
-    (void)sem;
-
-    (void)buf;
-    (void)pipe;
 
     TIMER_LOG(t, "Vulkan init");
 
@@ -238,50 +182,42 @@ int    main(i32 argc, char **argv)
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
         u32 iid = 0;
         vc_swapchain_acquire_image(&ctx, &iid, sem);
+        //vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
 
         vc_command_buffer_reset(&ctx, buf);
         vc_command_buffer_begin(&ctx, buf);
 
-        vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
-        vc_command_image_pipe_barrier(
+        vc_command_render_pass_begin(
             &ctx,
             buf,
-            curi,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            VK_IMAGE_LAYOUT_GENERAL,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_ACCESS_MEMORY_READ_BIT,
-            VK_ACCESS_MEMORY_WRITE_BIT,
-            VC_QUEUE_IGNORED,
-            VC_QUEUE_IGNORED
-            );
-
-        vc_command_buffer_bind_descriptor_set(&ctx, buf, pipe, sets[iid]);
-        vc_command_buffer_compute_pipeline(
-            &ctx,
-            buf,
-            &(compute_dispatch_desc){
-                .pipe     = pipe,
-                .groups_x = 120,
-                .groups_y = 65,
-                .groups_z = 1,
+            (render_pass_begin_desc){
+                .pass              = pass,
+                .render_area       = (VkRect2D){ { 0, 0 }, { 1916, 1036 } },
+                .subpass_contents  = VK_SUBPASS_CONTENTS_INLINE,
+                .clear_value_count = 1,
+                .clear_values      = &(VkClearValue){ .color = { { 1, 1, 1, 1 } } },
+                .frambuffer        = frambuffers[iid],
             }
             );
 
-        vc_command_image_pipe_barrier(
+        vc_command_dyn_set_viewport(
             &ctx,
             buf,
-            curi,
-            VK_IMAGE_LAYOUT_GENERAL,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_ACCESS_MEMORY_WRITE_BIT,
-            VK_ACCESS_MEMORY_READ_BIT,
-            VC_QUEUE_IGNORED,
-            VC_QUEUE_IGNORED
+            1,
+            &(VkViewport){ .x = 0, .y = 0, .width = 1916, .height = 1036, .minDepth = 0.0f, .maxDepth = 1.0f }
             );
+
+        vc_command_dyn_set_scissors(
+            &ctx,
+            buf,
+            1,
+            &(VkRect2D){ { 0, 0 }, { 1916, 1036 } }
+            );
+
+        vc_command_pipeline_bind(&ctx, buf, graphics_pipe);
+        vc_command_draw(&ctx, buf, 3, 1, 0, 0);
+
+        vc_command_render_pass_end(&ctx, buf);
 
         vc_command_buffer_end(&ctx, buf);
         vc_command_buffer_submit(

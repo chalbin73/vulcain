@@ -107,8 +107,9 @@ void    vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer com
     }
     else if (*( (vc_pipeline_type *)pipeline_obj ) == VC_PIPELINE_TYPE_GRAPHICS)
     {
-        FATAL("Graphics pipeline not implemented moron.");
+        vc_priv_man_graphics_pipe *grap_pipe = pipeline_obj;
         bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        layout     = grap_pipe->layout;
         return;
     }
     else
@@ -127,4 +128,71 @@ void    vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer com
         0,
         NULL
         );
+}
+
+void    vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, render_pass_begin_desc desc)
+{
+    vc_priv_man_command_buffer *buf      = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vc_priv_man_render_pass *render_pass = vc_handle_mgr_ptr(&ctx->handle_manager, desc.pass);
+    vc_priv_man_framebuffer *fb          = vc_handle_mgr_ptr(&ctx->handle_manager, desc.frambuffer);
+
+    VkRenderPassBeginInfo begin_i =
+    {
+        .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass  = render_pass->render_pass,
+        .framebuffer = fb->frambuffer,
+
+        .renderArea      = desc.render_area,
+        .clearValueCount = desc.clear_value_count,
+        .pClearValues    = desc.clear_values
+    };
+
+    vkCmdBeginRenderPass(buf->command_buffer, &begin_i, desc.subpass_contents);
+}
+
+void    vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipe)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    void *pipeline_obj              = vc_handle_mgr_ptr(&ctx->handle_manager, pipe);
+
+    if (*( (vc_pipeline_type *)pipeline_obj ) == VC_PIPELINE_TYPE_COMPUTE)
+    {
+        vc_priv_man_compute_pipe *comp_pipe = pipeline_obj;
+        vkCmdBindPipeline(buf->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, comp_pipe->pipeline);
+    }
+    else if (*( (vc_pipeline_type *)pipeline_obj ) == VC_PIPELINE_TYPE_GRAPHICS)
+    {
+        vc_priv_man_graphics_pipe *grap_pipe = pipeline_obj;
+        vkCmdBindPipeline(buf->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grap_pipe->pipeline);
+        return;
+    }
+    else
+    {
+        FATAL("Pipeline object error.");
+        return;
+    }
+}
+
+void    vc_command_render_pass_end(vc_ctx *ctx, vc_command_buffer command_buffer)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkCmdEndRenderPass(buf->command_buffer);
+}
+
+void    vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_buffer command_buffer, u32 viewport_count, VkViewport *viewports)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkCmdSetViewport(buf->command_buffer, 0, viewport_count, viewports);
+}
+
+void    vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_buffer command_buffer, u32 scissor_count, VkRect2D *scissors)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkCmdSetScissor(buf->command_buffer, 0, scissor_count, scissors);
+}
+
+void    vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkCmdDraw(buf->command_buffer, vertex_count, instance_count, first_vertex, first_instance);
 }

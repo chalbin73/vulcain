@@ -293,6 +293,16 @@ typedef struct
 
 } graphics_pipeline_desc;
 
+typedef struct
+{
+    vc_render_pass       pass;
+    vc_framebuffer       frambuffer;
+    VkRect2D             render_area;
+    u32                  clear_value_count;
+    VkClearValue        *clear_values;
+    VkSubpassContents    subpass_contents;
+} render_pass_begin_desc;
+
 /**
  * @brief Describes the creation of a vulkan compute pipeline
  *
@@ -646,6 +656,15 @@ void                        vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, v
  * @note This copy is automatic, and different images sizes may result in validation layers complaining
  */
 void                        vc_command_simple_image_copy(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image src, vc_image dst);
+
+
+//TODO: Documentation
+void                        vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, render_pass_begin_desc desc);
+void                        vc_command_render_pass_end(vc_ctx *ctx, vc_command_buffer command_buffer);
+void                        vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipe);
+void                        vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_buffer command_buffer, u32 viewport_count, VkViewport *viewports);
+void                        vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_buffer command_buffer, u32 scissor_count, VkRect2D *scissors);
+void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
 
 /* ---------------- Synchronisation ---------------- */
 
