@@ -251,6 +251,7 @@ b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
     VK_CHECKR(vkCreateInstance(&inst_ci, NULL, &ctx->vk_instance), "Could not create instance");
 
     ctx->vk_debug_messenger = VK_NULL_HANDLE;
+    ctx->debug_enabled      = desc->enable_debugging;
     if (desc->enable_debugging)
     {
         mem_free( (void *)inst_ci.ppEnabledExtensionNames );
@@ -508,6 +509,9 @@ void    vc_destroy_ctx(vc_ctx   *ctx)
     vkDeviceWaitIdle(ctx->vk_device);
     TRACE("Destroying vc context.");
 
+    // Check for swapchain existence is handled
+    vc_swapchain_cleanup(ctx);
+
     vc_handle_mgr_destroy(&ctx->handle_manager, ctx);
     hashmap_destroy(&ctx->desc_set_layouts_hashmap);
 
@@ -518,10 +522,7 @@ void    vc_destroy_ctx(vc_ctx   *ctx)
         vkDestroyDescriptorPool(ctx->vk_device, ctx->vk_main_descriptor_pool, NULL);
     }
 
-    if (ctx->swapchain.vk_swapchain)
-    {
-        _vc_priv_delete_swapchain(ctx);
-    }
+
     if (ctx->vk_device)
     {
         if (ctx->queues.pools[VC_QUEUE_MAIN])

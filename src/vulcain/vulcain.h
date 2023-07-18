@@ -55,6 +55,7 @@ typedef struct
 {
     u32    width;
     u32    height;
+    u32    image_count;
 } swapchain_created_info;
 
 // Forward declaration for callbacks
@@ -65,11 +66,29 @@ typedef struct vc_ctx vc_ctx;
  *
  */
 typedef void (*swapchain_recreated_callback_func)(vc_ctx *ctx, void *user_data, swapchain_created_info info);
+typedef void (*swapchain_destroyed_callback_func)(vc_ctx *ctx, void *user_data);
 
+/**
+ * @brief Query for a swapchain configuration
+ *
+ */
+typedef struct
+{
+    // Reserved
+} swapchain_configuration_query;
+
+/**
+ * @brief Description of a swapchain creation/recreation
+ *
+ */
 typedef struct swapchain_desc
 {
 
+    /** @brief Called when swapchain is created/recreated, used to create swapchain dependent objects */
     swapchain_recreated_callback_func    recreation_callback;
+
+    /** @brief Called when swapchain is destroyed, used to free user allocated data (handle created during recreation callback are automatically freed) */
+    swapchain_destroyed_callback_func    destruction_callack;
     void                                *callback_user_data;
 
     VkImageUsageFlags                    swapchain_images_usage;
@@ -142,16 +161,19 @@ typedef struct
  */
 typedef struct
 {
-    VkAttachmentLoadOp     load_op;
-    VkAttachmentStoreOp    store_op;
+    VkAttachmentLoadOp       load_op;
+    VkAttachmentStoreOp      store_op;
 
-    VkAttachmentLoadOp     stencil_load_op;
-    VkAttachmentStoreOp    stencil_store_op;
+    VkAttachmentLoadOp       stencil_load_op;
+    VkAttachmentStoreOp      stencil_store_op;
 
     /** @brief The layout in which the image will be upon entering the render pass */
-    VkImageLayout          initial_layout;
+    VkImageLayout            initial_layout;
     /** @brief The layout in which the image shall be upon exiting the render pass */
-    VkImageLayout          final_layout;
+    VkImageLayout            final_layout;
+
+    VkFormat                 attachment_format;
+    VkSampleCountFlagBits    attachment_sample_counts;
 } render_pass_attachment_params;
 
 /**
@@ -206,9 +228,9 @@ typedef struct
  */
 typedef struct
 {
-    render_attachments_set           attachment_set;
+    u32                              attachment_count;
 
-    /** @brief Parameters for each of the attachment in the attchment set, indexed in the same way */
+    /** @brief Parameters for each of the attachment */
     render_pass_attachment_params   *attachment_desc;
 
     u32                              subpass_count;
@@ -472,6 +494,16 @@ typedef struct
  */
 typedef u32 vc_swp_img_id;
 
+typedef struct
+{
+    VkSurfaceFormatKHR          swapchain_format;
+    VkPresentModeKHR            present_mode;
+    VkExtent2D                  swapchain_extent;
+    VkFormat                    depth_format;
+    u32                         image_count;
+    VkSurfaceCapabilitiesKHR    capabilities;
+} swapchain_configuration;
+
 // No typedef because of forward decl
 /**
  * @brief The context for all vulcain operations
@@ -480,6 +512,7 @@ typedef u32 vc_swp_img_id;
 struct vc_ctx
 {
     VkInstance                   vk_instance;
+    b8                           debug_enabled;
     VkDebugUtilsMessengerEXT     vk_debug_messenger;
     VkSurfaceKHR                 vk_window_surface;
     VkPhysicalDevice             vk_selected_physical_device;
@@ -499,29 +532,19 @@ struct vc_ctx
         VkQueue          queues[VC_QUEUE_TYPE_COUNT];
         VkCommandPool    pools[VC_QUEUE_TYPE_COUNT];
     }
-    queues;
+                               queues;
 
     // Data relative to the swapchain parameters
-    struct swapchain_conf
-    {
-        VkSurfaceFormatKHR          swapchain_format;
-        VkPresentModeKHR            present_mode;
-        VkExtent2D                  swapchain_extent;
-        VkFormat                    depth_format;
-        u32                         image_count;
-        VkSurfaceCapabilitiesKHR    capabilities;
-    }
-    swapchain_conf;
+    swapchain_configuration    swapchain_conf;
 
     // Contains objects tied to the swapchain
     struct swapchain
     {
         VkSwapchainKHR    vk_swapchain;
-        swapchain_desc    desc;
-        VkImage          *swapchain_images;
-        vc_image         *swapchain_image_hndls;
-        VkImageView      *swapchain_image_views;
         u32               swapchain_image_count;
+        swapchain_desc    desc;
+
+        vc_image         *swapchain_image_hndls;
     }
     swapchain;
 };
@@ -531,6 +554,8 @@ const char            *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_v
 const char            *vc_priv_VkFormat_to_str(VkFormat    input_value);
 const char            *vc_priv_VkResult_to_str(VkResult    input_value);
 VkPipelineBindPoint    vc_priv_pipeline_type_to_bind_point(vc_pipeline_type    type);
+char                  *vc_priv_VkDebugUtilsMessageSeverityFlagBitsEXT_to_str(VkDebugUtilsMessageSeverityFlagBitsEXT    input_value);
+char                  *vc_priv_VkDebugUtilsMessageSeverityFlagBitsEXT_to_prefix_str(VkDebugUtilsMessageSeverityFlagBitsEXT    input_value);
 
 /* ---------------- Error checking ---------------- */
 #define VK_CHECK(s, m)                                                                                                 \
@@ -715,13 +740,28 @@ vc_semaphore                vc_semaphore_create(vc_ctx   *ctx);
 /* ---------------- Swapchain ---------------- */
 
 /**
- * @brief Sets up the swapchain.
+ * @brief Selects a swapchain configuration, this function can be called once at the beginning, and all the next creations/recreations will used the queried conf.
  *
  * @param ctx
  * @param desc The swapchain description
  */
-void                        vc_swapchain_setup(vc_ctx *ctx, swapchain_desc desc);
+void                        vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query);
 
+/**
+ * @brief Returns the retrieved configuration after setting up the swapchain
+ *
+ * @param ctx
+ * @return swapchain_configuration
+ */
+swapchain_configuration     vc_swapchain_configuration_get(vc_ctx   *ctx);
+
+/**
+ * @brief Actually creates a swapchain, that can be used later. This function should usally be called once, the destruction/creation is then handled through present/acquire/recreation operations
+ *
+ * @param ctx
+ * @param desc
+ */
+void                        vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc);
 /**
  * @brief Sets up the image views for every swapchain image
  *
@@ -736,16 +776,18 @@ void                        vc_swapchain_create_full_image_views(vc_ctx   *ctx);
  * @param ctx
  * @param[out] image_id The id (index) of the image that has will be acquired
  * @param acquired_semaphore The semaphore to signal upon acquire of the image
+ * @returns b8 FALSE if a swapchain recreation was made, thus the frame need to be cancelled, and restarted (image_id would be null is this case)
  */
-void                        vc_swapchain_acquire_image(vc_ctx *ctx, vc_swp_img_id *image_id, vc_semaphore acquired_semaphore);
+b8                          vc_swapchain_acquire_image(vc_ctx *ctx, vc_swp_img_id *image_id, vc_semaphore acquired_semaphore);
 
 /**
  * @brief Presents an image on the screen
  *
  * @param ctx
  * @param image_id The id of the previously acquired image
+ * @returns b8 FALSE if a swapchain recreation was made, thus the frame need to be cancelled, and restarted
  */
-void                        vc_swapchain_present_image(vc_ctx *ctx, vc_swp_img_id image_id);
+b8                          vc_swapchain_present_image(vc_ctx *ctx, vc_swp_img_id image_id);
 
 /**
  * @brief Gets a pointer to an array of image handles to the swapchain images (can be indexed using @c{vc_swp_img_id})
@@ -762,6 +804,8 @@ vc_image                   *vc_swapchain_get_image_hndls(vc_ctx   *ctx);
  * @return u32 The number of images in the swapchain
  */
 u32                         vc_swapchain_image_count(vc_ctx   *ctx);
+
+void                        vc_swapchain_force_recreation(vc_ctx   *ctx);
 
 /* ---------------- Descriptors ---------------- */
 

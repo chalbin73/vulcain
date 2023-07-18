@@ -9,13 +9,57 @@
 
 GLFWwindow *window;
 
-int    main(i32 argc, char **argv)
+vc_framebuffer *frambuffers;
+VkExtent2D fb_size;
+
+vc_semaphore sem;
+
+void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info info)
+{
+    FATAL("OH MY GOD HERE'S A NEW SWAPCHAIN GODDAMIT (%dx%d)", info.width, info.height);
+    frambuffers = mem_allocate(sizeof(vc_framebuffer) * info.image_count, MEMORY_TAG_RENDERER);
+
+    for(int i = 0; i < info.image_count; i++)
+    {
+        render_attachments_set render_att =
+        {
+            .attachment_count = 1,
+            .attachments      = (vc_image[1]){ vc_swapchain_get_image_hndls(ctx)[i] }
+        };
+
+        frambuffers[i] = vc_framebuffer_create(
+            ctx,
+            (framebuffer_desc)
+            {
+                .attachment_set = render_att,
+                .render_pass    = *( (vc_render_pass *)data ),
+                .layers         = 1,
+            }
+            );
+    }
+
+    fb_size = (VkExtent2D)
+    {
+        .width = info.width, .height = info.height
+    };
+
+    sem = vc_semaphore_create(ctx);
+}
+
+void    swp_destruction_cllbck(vc_ctx *ctx, void *data)
+{
+    mem_free(frambuffers);
+    FATAL("OH MY GOD NO I'M BEING DESTROYED !!");
+}
+
+int     main(i32 argc, char **argv)
 {
     INFO("/* ---------------- START ---------------- */");
     INFO("Hello, World ! Welcome to vulcain !");
 
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     window = glfwCreateWindow(1920, 1080, "Hello !", NULL, NULL);
     glfwShowWindow(window);
     u32 exts_count    = 0;
@@ -48,20 +92,18 @@ int    main(i32 argc, char **argv)
         }
         );
 
-
-    render_attachments_set render_att =
-    {
-        .attachment_count = 1,
-        .attachments      = (vc_image[1]){ vc_swapchain_get_image_hndls(&ctx)[0] }
-    };
+    vc_swapchain_setup(
+        &ctx,
+        (swapchain_configuration_query)
+        { }
+        );
 
     vc_render_pass pass = vc_render_pass_create(
         &ctx,
         (render_pass_desc)
         {
-            .attachment_set = render_att,
-
-            .attachment_desc = (render_pass_attachment_params[1])
+            .attachment_count = 1,
+            .attachment_desc  = (render_pass_attachment_params[1])
             {
                 [0] =
                 {
@@ -72,7 +114,10 @@ int    main(i32 argc, char **argv)
                     .stencil_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 
                     .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .final_layout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                    .final_layout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+
+                    .attachment_format        = vc_swapchain_configuration_get(&ctx).swapchain_format.format,
+                    .attachment_sample_counts = VK_SAMPLE_COUNT_1_BIT,
                 }
             },
 
@@ -104,27 +149,21 @@ int    main(i32 argc, char **argv)
             }
         }
         );
+
+    vc_swapchain_commit(
+        &ctx,
+        (swapchain_desc)
+        {
+            .swapchain_images_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .callback_user_data     = (void *)&pass,
+            .recreation_callback    = swp_recreation_cllbck,
+            .destruction_callack    = swp_destruction_cllbck,
+        }
+        );
+
     (void)pass;
 
-    vc_framebuffer frambuffers[vc_swapchain_image_count(&ctx)];
-    for(int i = 0; i < vc_swapchain_image_count(&ctx); i++)
-    {
-        render_attachments_set render_att =
-        {
-            .attachment_count = 1,
-            .attachments      = (vc_image[1]){ vc_swapchain_get_image_hndls(&ctx)[i] }
-        };
 
-        frambuffers[i] = vc_framebuffer_create(
-            &ctx,
-            (framebuffer_desc)
-            {
-                .attachment_set = render_att,
-                .render_pass    = pass,
-                .layers         = 1,
-            }
-            );
-    }
 
     graphics_pipeline_code_desc code;
     code.vertex_code          = fio_read_whole_file("shaders/a.vert.spv", &code.vertex_code_size);
@@ -172,17 +211,26 @@ int    main(i32 argc, char **argv)
 
     vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_MAIN);
 
-    vc_semaphore sem = vc_semaphore_create(&ctx);
-
     TIMER_LOG(t, "Vulkan init");
 
+    b8 recreated = FALSE;
     while ( !glfwWindowShouldClose(window) )
     {
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
         u32 iid = 0;
-        vc_swapchain_acquire_image(&ctx, &iid, sem);
+        if( !vc_swapchain_acquire_image(&ctx, &iid, sem) )
+        {
+            continue;
+        }
         //vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
+
+        if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !recreated)
+        {
+            recreated = TRUE;
+            vc_swapchain_force_recreation(&ctx);
+            continue;
+        }
 
         vc_command_buffer_reset(&ctx, buf);
         vc_command_buffer_begin(&ctx, buf);
@@ -192,7 +240,7 @@ int    main(i32 argc, char **argv)
             buf,
             (render_pass_begin_desc){
                 .pass              = pass,
-                .render_area       = (VkRect2D){ { 0, 0 }, { 1916, 1036 } },
+                .render_area       = (VkRect2D){ { 0, 0 }, fb_size },
                 .subpass_contents  = VK_SUBPASS_CONTENTS_INLINE,
                 .clear_value_count = 1,
                 .clear_values      = &(VkClearValue){ .color = { { 1, 1, 1, 1 } } },
@@ -204,14 +252,14 @@ int    main(i32 argc, char **argv)
             &ctx,
             buf,
             1,
-            &(VkViewport){ .x = 0, .y = 0, .width = 1916, .height = 1036, .minDepth = 0.0f, .maxDepth = 1.0f }
+            &(VkViewport){ .x = 0, .y = 0, .width = fb_size.width, .height = fb_size.height, .minDepth = 0.0f, .maxDepth = 1.0f }
             );
 
         vc_command_dyn_set_scissors(
             &ctx,
             buf,
             1,
-            &(VkRect2D){ { 0, 0 }, { 1916, 1036 } }
+            &(VkRect2D){ { 0, 0 }, fb_size }
             );
 
         vc_command_pipeline_bind(&ctx, buf, graphics_pipe);

@@ -666,3 +666,38 @@ inline VkPipelineBindPoint    vc_priv_pipeline_type_to_bind_point(vc_pipeline_ty
         return 0;
     }
 }
+
+char   *vc_priv_VkDebugUtilsMessageSeverityFlagBitsEXT_to_str(VkDebugUtilsMessageSeverityFlagBitsEXT    input_value)
+{
+    switch (input_value)
+    {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        return "VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        return "VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        return "VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        return "VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT";
+    default:
+        return "Unhandled VkDebugUtilsMessageSeverityFlagBitsEXT";
+    }
+}
+
+char   *vc_priv_VkDebugUtilsMessageSeverityFlagBitsEXT_to_prefix_str(VkDebugUtilsMessageSeverityFlagBitsEXT    input_value)
+{
+
+    switch (input_value)
+    {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        return "ERROR";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        return "INFO";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        return "VERBOSE";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        return "WARNING";
+    default:
+        return "Unhandled VkDebugUtilsMessageSeverityFlagBitsEXT";
+    }
+}

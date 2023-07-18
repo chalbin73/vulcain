@@ -39,7 +39,6 @@ vc_handle    vc_handle_mgr_alloc(vc_handle_mgr *mgr, vc_handle_type type)
 
     // Allocate in raw handle manager
     handle hndl = handle_mgr_allocate(&mgr->handle_managers[type]);
-    DEBUG( "Allocating a %s", vc_handle_type_to_str(type) );
     if (hndl)
     {
         vc_handle_unpack vc_hndl =
@@ -79,16 +78,15 @@ b8           vc_handle_mgr_free(vc_handle_mgr *mgr, vc_handle hndl, void *destro
     ASSERT_MSG(unpacked.packed, "Invalid handle provided.");
     ASSERT_MSG(unpacked.type < VC_HANDLE_TYPE_COUNT, "Invalide handle type provided.");
 
-    DEBUG( "Freeing a %s", vc_handle_type_to_str(unpacked.type) );
-
     // Remove from destruction queue (search)
     u32 count = darray_length(mgr->destroy_queue);
     for (int i = 0; i < count; i++)
     {
         if (mgr->destroy_queue[i] == hndl)
         {
-            // Handle found, remove
+            // Handle found, remove from destroy queue
             darray_pop_at(mgr->destroy_queue, i, NULL);
+            darray_pop_at(mgr->destroy_queue_markers, i, NULL);
             break;
         }
     }
@@ -132,8 +130,8 @@ void    vc_handle_mgr_set_current_marker(vc_handle_mgr *mgr, vc_handle_marker_fl
 
 u64     vc_handle_mgr_destroy_marked(vc_handle_mgr *mgr, vc_handle_marker_flags marker, void *destroy_ctx)
 {
-    u32 count           = darray_length(mgr->destroy_queue);
-    u64 destroyed_count = 0;
+    u32 count             = darray_length(mgr->destroy_queue);
+    vc_handle *to_destroy = darray_create(vc_handle);
 
     ASSERT( count == darray_length(mgr->destroy_queue_markers) ); // The two destroy queues need to be in sync
     for (int i = count - 1; i >= 0; i--)
@@ -143,20 +141,18 @@ u64     vc_handle_mgr_destroy_marked(vc_handle_mgr *mgr, vc_handle_marker_flags 
             continue;
         }
 
-        vc_handle_unpack hndl =
-        {
-            .packed = mgr->destroy_queue[i]
-        };
-        if (mgr->destroy_funcs[hndl.type])
-        {
-            mgr->destroy_funcs[hndl.type]( destroy_ctx, vc_handle_mgr_ptr(mgr, hndl.packed) );
-        }
-        else
-        {
-            WARN( "No destroy function registered for type %s", vc_handle_type_to_str(hndl.type) );
-        }
-        destroyed_count++;
+        darray_push(to_destroy, mgr->destroy_queue[i]);
     }
+
+    u64 destroyed_count = darray_length(to_destroy);
+
+
+    for(int i = 0; i < destroyed_count; i++)
+    {
+        vc_handle_mgr_free(mgr, to_destroy[i], destroy_ctx);
+    }
+    darray_destroy(to_destroy);
+
     return destroyed_count;
 }
 

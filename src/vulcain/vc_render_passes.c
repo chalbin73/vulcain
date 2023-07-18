@@ -9,17 +9,15 @@ b8                _vc_priv_render_pass_destroy(vc_ctx *ctx, vc_priv_man_render_p
 
 vc_render_pass    vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc)
 {
-    VkAttachmentDescription *attachments = mem_allocate(sizeof(VkAttachmentDescription) * desc.attachment_set.attachment_count, MEMORY_TAG_RENDERER);
-    vc_priv_man_image *img;
+    VkAttachmentDescription *attachments = mem_allocate(sizeof(VkAttachmentDescription) * desc.attachment_count, MEMORY_TAG_RENDERER);
 
     // Prepare attachment descriptions
-    for(int i = 0; i < desc.attachment_set.attachment_count; i++)
+    for(int i = 0; i < desc.attachment_count; i++)
     {
-        img            = vc_handle_mgr_ptr(&ctx->handle_manager, desc.attachment_set.attachments[i]);
         attachments[i] = (VkAttachmentDescription)
         {
-            .format  = img->image_desc.image_format,
-            .samples = img->image_desc.sample_count,
+            .format  = desc.attachment_desc[i].attachment_format,
+            .samples = desc.attachment_desc[i].attachment_sample_counts,
 
             .loadOp  = desc.attachment_desc[i].load_op,
             .storeOp = desc.attachment_desc[i].store_op,
@@ -78,7 +76,7 @@ vc_render_pass    vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc)
     {
         .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 
-        .attachmentCount = desc.attachment_set.attachment_count,
+        .attachmentCount = desc.attachment_count,
         .pAttachments    = attachments,
 
         .subpassCount = desc.subpass_count,
