@@ -490,6 +490,34 @@ typedef struct
     }    swapchain;
 } vc_ctx;
 
+
+/**
+ * @brief Characterisitcs of a newly created swapchain used in the callback
+ *
+ */
+typedef struct
+{
+    u32    width;
+    u32    height;
+} swapchain_created_info;
+
+/**
+ * @brief Callback function used when the swapchain is being recreated
+ *
+ */
+typedef void (*swapchain_recreated_callback_func)(vc_ctx *ctx, void *user_data, swapchain_created_info info);
+
+typedef struct
+{
+
+    swapchain_recreated_callback_func    recreation_callback;
+    void                                *callback_user_data;
+
+    VkImageUsageFlags                    swapchain_images_usage;
+
+    // TODO: Add some format query stuff
+} swapchain_desc;
+
 /* ---------------- Enum helpers ---------------- */
 const char            *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_value);
 const char            *vc_priv_VkFormat_to_str(VkFormat    input_value);
@@ -677,6 +705,14 @@ void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer comma
 vc_semaphore                vc_semaphore_create(vc_ctx   *ctx);
 
 /* ---------------- Swapchain ---------------- */
+
+/**
+ * @brief Sets up the swapchain.
+ *
+ * @param ctx
+ * @param desc The swapchain description
+ */
+void                        vc_swapchain_setup(vc_ctx *ctx, swapchain_desc desc);
 
 /**
  * @brief Sets up the image views for every swapchain image
