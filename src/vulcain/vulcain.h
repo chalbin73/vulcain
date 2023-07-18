@@ -46,6 +46,37 @@ typedef struct
     VkPhysicalDeviceFeatures    requested_features;
 } physical_device_query;
 
+
+/**
+ * @brief Characterisitcs of a newly created swapchain used in the callback
+ *
+ */
+typedef struct
+{
+    u32    width;
+    u32    height;
+} swapchain_created_info;
+
+// Forward declaration for callbacks
+typedef struct vc_ctx vc_ctx;
+
+/**
+ * @brief Callback function used when the swapchain is being recreated
+ *
+ */
+typedef void (*swapchain_recreated_callback_func)(vc_ctx *ctx, void *user_data, swapchain_created_info info);
+
+typedef struct swapchain_desc
+{
+
+    swapchain_recreated_callback_func    recreation_callback;
+    void                                *callback_user_data;
+
+    VkImageUsageFlags                    swapchain_images_usage;
+
+    // TODO: Add some format query stuff
+} swapchain_desc;
+
 /**
  * @brief A type of vulkan queue (based on what family they are created on)
  *
@@ -441,11 +472,12 @@ typedef struct
  */
 typedef u32 vc_swp_img_id;
 
+// No typedef because of forward decl
 /**
  * @brief The context for all vulcain operations
  *
  */
-typedef struct
+struct vc_ctx
 {
     VkInstance                   vk_instance;
     VkDebugUtilsMessengerEXT     vk_debug_messenger;
@@ -466,7 +498,8 @@ typedef struct
         f32              priorities[VC_QUEUE_TYPE_COUNT];
         VkQueue          queues[VC_QUEUE_TYPE_COUNT];
         VkCommandPool    pools[VC_QUEUE_TYPE_COUNT];
-    }    queues;
+    }
+    queues;
 
     // Data relative to the swapchain parameters
     struct swapchain_conf
@@ -477,46 +510,21 @@ typedef struct
         VkFormat                    depth_format;
         u32                         image_count;
         VkSurfaceCapabilitiesKHR    capabilities;
-    }    swapchain_conf;
+    }
+    swapchain_conf;
 
     // Contains objects tied to the swapchain
     struct swapchain
     {
         VkSwapchainKHR    vk_swapchain;
+        swapchain_desc    desc;
         VkImage          *swapchain_images;
         vc_image         *swapchain_image_hndls;
         VkImageView      *swapchain_image_views;
         u32               swapchain_image_count;
-    }    swapchain;
-} vc_ctx;
-
-
-/**
- * @brief Characterisitcs of a newly created swapchain used in the callback
- *
- */
-typedef struct
-{
-    u32    width;
-    u32    height;
-} swapchain_created_info;
-
-/**
- * @brief Callback function used when the swapchain is being recreated
- *
- */
-typedef void (*swapchain_recreated_callback_func)(vc_ctx *ctx, void *user_data, swapchain_created_info info);
-
-typedef struct
-{
-
-    swapchain_recreated_callback_func    recreation_callback;
-    void                                *callback_user_data;
-
-    VkImageUsageFlags                    swapchain_images_usage;
-
-    // TODO: Add some format query stuff
-} swapchain_desc;
+    }
+    swapchain;
+};
 
 /* ---------------- Enum helpers ---------------- */
 const char            *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_value);

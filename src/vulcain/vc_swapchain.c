@@ -7,10 +7,11 @@ b8      _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image);
 
 void    vc_swapchain_setup(vc_ctx *ctx, swapchain_desc desc)
 {
-    _vc_priv_setup_default_swapchain(ctx);
+    _vc_priv_setup_default_swapchain(ctx, desc);
+    ctx->swapchain.desc = desc;
 }
 
-b8      _vc_priv_setup_default_swapchain(vc_ctx   *ctx)
+b8      _vc_priv_setup_default_swapchain(vc_ctx *ctx, swapchain_desc desc)
 {
     if (!ctx->use_windowing)
     {
@@ -19,18 +20,26 @@ b8      _vc_priv_setup_default_swapchain(vc_ctx   *ctx)
     }
     INFO("Selecting swapchain configuration");
 
-    _vc_priv_select_swapchain_configuration(ctx);
+    _vc_priv_select_swapchain_configuration(ctx, desc);
     VkExtent2D swp_extent =
     {
         0
     };
-    _vc_priv_get_optimal_swapchain_size(ctx, &swp_extent);
+    _vc_priv_get_optimal_swapchain_size(ctx, desc, &swp_extent);
     INFO("Create swapchain with extent of %ux%u", swp_extent.width, swp_extent.height);
-    _vc_priv_create_swapchain(ctx, swp_extent);
+    _vc_priv_create_swapchain(ctx, desc, swp_extent);
+
+    INFO("Swapchain created, calling user callback.");
+    desc.recreation_callback(
+        ctx,
+        desc.callback_user_data,
+        (swapchain_created_info){ .width = swp_extent.width, .height = swp_extent.height }
+        );
+
     return TRUE;
 }
 
-b8    _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
+b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D extent)
 {
     VkSwapchainCreateInfoKHR sc_ci =
     {
@@ -41,7 +50,7 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, VkExtent2D extent)
         .imageColorSpace  = ctx->swapchain_conf.swapchain_format.colorSpace,
         .imageExtent      = (VkExtent2D){ .width = extent.width,              .height= extent.height },
         .imageArrayLayers = 1,
-        .imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, //TODO: Expose this
+        .imageUsage       = desc.swapchain_images_usage,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .preTransform     = ctx->swapchain_conf.capabilities.currentTransform,
         .compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -125,7 +134,7 @@ b8    _vc_priv_delete_swapchain(vc_ctx   *ctx)
     return TRUE;
 }
 
-b8    _vc_priv_select_swapchain_configuration(vc_ctx   *ctx)
+b8    _vc_priv_select_swapchain_configuration(vc_ctx *ctx, swapchain_desc desc)
 {
     // Select swapchain format
     u32 format_count = 0;
@@ -231,7 +240,7 @@ b8    _vc_priv_select_swapchain_configuration(vc_ctx   *ctx)
     return TRUE;
 }
 
-b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
+b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, swapchain_desc desc, VkExtent2D *extent)
 {
     // Select extent
     u32 width  = 0;

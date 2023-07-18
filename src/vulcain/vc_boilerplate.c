@@ -10,7 +10,6 @@
 
 static const char * const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
-b8                                       _vc_priv_setup_default_swapchain(vc_ctx   *ctx);
 b8                                       _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
 b8                                       _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
 b8                                       _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
