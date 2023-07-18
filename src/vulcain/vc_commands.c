@@ -55,6 +55,8 @@ void    vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, 
         .pWaitDstStageMask    = wait_stages,
     };
 
+
+
     vkQueueSubmit(ctx->queues.queues[buf->queue_type], 1, &submit_i, VK_NULL_HANDLE);
 }
 

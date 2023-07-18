@@ -379,13 +379,6 @@ typedef struct
     u32                groups_z;
 } compute_dispatch_desc;
 
-// Wtf is that ... <DEPRECATED>, might be used latter
-typedef enum
-{
-    VC_MEMORY_HOST_VISIBLE = 0,
-    VC_MEMORY_DEVICE_LOCAL_HOST_VISIBLE,
-    VC_MEMORY_DEVICE_LOCAL_NOT_VISIBLE,
-} memory_visibility;
 
 /**
  * @brief Parameters for vulkan buffer allocation
@@ -393,9 +386,7 @@ typedef enum
  */
 typedef struct
 {
-    // TODO: Make this better such that we can select device local, not host visible memeory (for more optimization)
-    b8                       require_host_visible;
-    b8                       require_device_local;
+    VkMemoryPropertyFlags    required_properties;
     VkBufferUsageFlagBits    buffer_usage;
     u64                      size;
     b8                       share;
@@ -726,6 +717,7 @@ void                        vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buf
 void                        vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_buffer command_buffer, u32 viewport_count, VkViewport *viewports);
 void                        vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_buffer command_buffer, u32 scissor_count, VkRect2D *scissors);
 void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
+void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer src, vc_buffer dst, u32 region_count, VkBufferCopy *regions);
 
 /* ---------------- Synchronisation ---------------- */
 

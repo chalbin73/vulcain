@@ -63,10 +63,10 @@ typedef struct
 
 typedef struct
 {
-    VkBuffer             buffer;
-    VmaAllocation        allocation;
-    memory_visibility    memory_visibility;
-    u64                  size;
+    VkBuffer                 buffer;
+    VmaAllocation            allocation;
+    VkMemoryPropertyFlags    memory_properties;
+    u64                      size;
 } vc_priv_man_buffer;
 
 typedef struct
