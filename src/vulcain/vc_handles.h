@@ -42,6 +42,19 @@ typedef enum
     VC_HANDLE_TYPE_COUNT
 } vc_handle_type;
 
+/**
+ * @brief Markers to mark the destruction queue, such that specific handle markers can be destroyed at once
+ *
+ */
+typedef enum
+{
+    // All handles have it
+    VC_HANDLE_MARKER_DEFAULT = 0,
+
+    // For objects that are created when swapchain is recreated
+    VC_HANDLE_MARKER_SWAPCHAIN_DEPENDENT_BIT = MK_FLAG(0),
+} vc_handle_marker_flags;
+
 // Anonymous handle
 VC_DEF_HANDLE(vc_handle);
 
@@ -80,11 +93,17 @@ typedef b8 (*vc_man_destroy_func)(void *ctx, void *managed_object);
 // The handle manager struct
 typedef struct
 {
-    handle_mgr              handle_managers[VC_HANDLE_TYPE_COUNT];
-    vc_man_destroy_func     destroy_funcs[VC_HANDLE_TYPE_COUNT];
-    vc_handle              *destroy_queue; // darray
-    vc_handle_mgr_counts    sizes;
-    vc_handle_mgr_counts    counts;
+    handle_mgr                handle_managers[VC_HANDLE_TYPE_COUNT];
+    vc_man_destroy_func       destroy_funcs[VC_HANDLE_TYPE_COUNT];
+
+    // These two arrays must stay in sync
+    vc_handle                *destroy_queue; // darray
+    vc_handle_marker_flags   *destroy_queue_markers; // darray
+
+    vc_handle_mgr_counts      sizes;
+    vc_handle_mgr_counts      counts;
+
+    vc_handle_marker_flags    current_marker;
 } vc_handle_mgr;
 
 /**
@@ -151,6 +170,24 @@ void         *vc_handle_mgr_ptr(vc_handle_mgr *mgr, vc_handle hndl);
  * @return b8 Success
  */
 b8            vc_handle_mgr_free(vc_handle_mgr *mgr, vc_handle hndl, void *destroy_ctx);
+
+/**
+ * @brief Sets the current marker, all handle allocated after this call will be marked with the specified marker
+ *
+ * @param mgr
+ * @param marker Marker flags
+ */
+void          vc_handle_mgr_set_current_marker(vc_handle_mgr *mgr, vc_handle_marker_flags marker);
+
+/**
+ * @brief Destroys all handles marked with a specific marker
+ *
+ * @param mgr
+ * @param marker The marker to destroy
+ * @param destroy_ctx The context pointer to give to the destroy function upon destroying
+ * @return u64 The number of object destroyed
+ */
+u64           vc_handle_mgr_destroy_marked(vc_handle_mgr *mgr, vc_handle_marker_flags marker, void *destroy_ctx);
 
 /**
  * @brief Destroys the handle manager, as well as all the allocated object (by calling their respective destroying functions)
