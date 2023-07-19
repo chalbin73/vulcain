@@ -182,6 +182,7 @@ typedef struct
  */
 typedef struct
 {
+    /** @brief The type of pipline used in this subpass */
     vc_pipeline_type         pipline_type;
 
     u32                      input_attachment_count;
@@ -248,7 +249,10 @@ typedef struct
  */
 typedef struct
 {
+    /** @brief The render pass with which the frambuffer is compatible */
     vc_render_pass            render_pass;
+
+    /** @brief The set of attachments is this frambuffer */
     render_attachments_set    attachment_set;
     u32                       layers; // Not sure about this one
 } framebuffer_desc;
@@ -293,12 +297,16 @@ typedef struct
 typedef struct
 {
 
+    /** @brief The code of the programmable pipeline stages */
     graphics_pipeline_code_desc            shader_code;
 
     u32                                    set_layout_count;
     vc_descriptor_set_layout              *set_layouts;
 
+    /** @brief The rendere pass with which this pipeline is used */
     vc_render_pass                         render_pass;
+
+    /** @brief The subpass in which this pipeline will be executed */
     u32                                    subpass_index;
 
     u32                                    vertex_input_binding_count;
@@ -710,14 +718,74 @@ void                        vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, v
  */
 void                        vc_command_simple_image_copy(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image src, vc_image dst);
 
-
-//TODO: Documentation
+/**
+ * @brief Begins a render pass object
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param desc
+ */
 void                        vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, render_pass_begin_desc desc);
+
+/**
+ * @brief Ends a render pass object (that was previously begun)
+ *
+ * @param ctx
+ * @param command_buffer
+ */
 void                        vc_command_render_pass_end(vc_ctx *ctx, vc_command_buffer command_buffer);
+
+/**
+ * @brief Binds a pipline (any type)
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param pipe The pipeline handle, either compute or graphics
+ */
 void                        vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipe);
+
+/**
+ * @brief Dynamically sets a set of viewports (set to dynamic during pipeline creation)
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param viewport_count The number of viewports
+ * @param viewports The viewports
+ */
 void                        vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_buffer command_buffer, u32 viewport_count, VkViewport *viewports);
+
+/**
+ * @brief Dynamically sets a set of scissors (set to dynamic during pipeline creation)
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param viewport_count The number of scissors
+ * @param viewports The scissors
+ */
 void                        vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_buffer command_buffer, u32 scissor_count, VkRect2D *scissors);
+
+/**
+ * @brief Send a draw call (vkCmdDraw)
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param vertex_count The number of vertices to draw
+ * @param instance_count The number of instance to draw
+ * @param first_vertex The index of the first vertex
+ * @param first_instance The index of the first instance
+ */
 void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
+
+/**
+ * @brief Copies a buffer into another
+ *
+ * @param ctx
+ * @param cmd_buf
+ * @param src The source buffer
+ * @param dst The destination buffer
+ * @param region_count The number of buffer regions to copy
+ * @param regions The regions to copy
+ */
 void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer src, vc_buffer dst, u32 region_count, VkBufferCopy *regions);
 
 /* ---------------- Synchronisation ---------------- */
@@ -798,6 +866,11 @@ vc_image                   *vc_swapchain_get_image_hndls(vc_ctx   *ctx);
  */
 u32                         vc_swapchain_image_count(vc_ctx   *ctx);
 
+/**
+ * @brief Forces a complete destruction/creation cycle of the pipline, thus calling the callback. If this is called during a frame, then the frame most likely needs to be cancelled
+ *
+ * @param ctx
+ */
 void                        vc_swapchain_force_recreation(vc_ctx   *ctx);
 
 /* ---------------- Descriptors ---------------- */
@@ -877,7 +950,28 @@ vc_descriptor_set_layout    vc_priv_desc_set_layout_get(vc_ctx *ctx, VkDescripto
  * @return vc_buffer A handle to the buffer
  */
 vc_buffer                   vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc);
+
+/**
+ * @brief Makes a coherent write from CPU to buffer, this write is blocking on the CPU, which makes it not suitable for performant operations.
+ *
+ * @param ctx
+ * @param dest Destination buffer
+ * @param offset Offset in bytes in the buffer
+ * @param length The length of the write
+ * @param data The data to write
+ * @param copy_queue The queue on which to send the copy command, and on which to wait
+ */
 void                        vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data, vc_queue_type copy_queue);
+
+/**
+ * @brief Simple copy into HOST_VISIBLE buffer, handles mapping, offseting, memcpy-ing, and unmapping the buffer, convinience function
+ *
+ * @param ctx
+ * @param dest The destination buffer (needs to be HOST_VISIBLE, and allocation_flags need to be set accordingly)
+ * @param offset The offset into the buffer from which to initiate the write
+ * @param length The length of the write
+ * @param data The data to write
+ */
 void                        vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data);
 
 /* ---------------- Images ---------------- */
@@ -902,12 +996,36 @@ void                        vc_image_create_full_image_view(vc_ctx *ctx, vc_imag
 
 /* ---------------- Graphics ---------------- */
 /* ---------------- Render pass ---------------- */
+
+/**
+ * @brief Creates a render pass object
+ *
+ * @param ctx
+ * @param desc
+ * @return vc_render_pass
+ */
 vc_render_pass              vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
 
 /* ---------------- Framebuffer ---------------- */
+
+/**
+ * @brief Creates a frambuffer object
+ *
+ * @param ctx
+ * @param desc
+ * @return vc_framebuffer
+ */
 vc_framebuffer              vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc);
 
 /* ---------------- Graphics Pipeline ---------------- */
+
+/**
+ * @brief Creates a graphics pipeline
+ *
+ * @param ctx
+ * @param desc
+ * @return vc_graphics_pipe
+ */
 vc_graphics_pipe            vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc desc);
 
 /* ---------------- Utils ---------------- */
