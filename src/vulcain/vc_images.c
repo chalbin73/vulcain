@@ -245,7 +245,7 @@ void    vc_image_create_full_image_view(vc_ctx *ctx, vc_image img)
             .components.r                    = VK_COMPONENT_SWIZZLE_R,
             .components.g                    = VK_COMPONENT_SWIZZLE_G,
             .components.b                    = VK_COMPONENT_SWIZZLE_B,
-            .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, // TODO: Make this modifiable, wtf moron, only supporting color ? (no depth ?)
+            .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, // TODO: Make this modifiable, wtf moron, only supporting color ? (no depth ?D)
             .subresourceRange.baseArrayLayer = 0,
             .subresourceRange.baseMipLevel   = 0,
             .subresourceRange.levelCount     = image->image_desc.mip_levels,

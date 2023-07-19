@@ -161,8 +161,36 @@ int     main(i32 argc, char **argv)
         }
         );
 
-    (void)pass;
+    vc_buffer rot_buf = vc_buffer_allocate(
+        &ctx,
+        (buffer_alloc_desc)
+        {
+            .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+            .size                = sizeof(f32),
+            .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            .share               = FALSE,
+        }
+        );
 
+    descriptor_set_desc desc_set_desc =
+    {
+        .binding_count = 1,
+        .bindings      = &(descriptor_binding_desc)
+        {
+            .descriptor_type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptor_count = 1,
+            .stage_flags      = VK_SHADER_STAGE_VERTEX_BIT,
+            .buffer_info      = &(descriptor_binding_buffer)
+            {
+                .buffer       = rot_buf,
+                .whole_buffer = TRUE,
+            }
+        }
+    };
+
+    vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, desc_set_desc);
+    vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
 
 
     graphics_pipeline_code_desc code;
@@ -177,7 +205,8 @@ int     main(i32 argc, char **argv)
         (graphics_pipeline_desc)
         {
             .shader_code                = code,
-            .set_layout_count           = 0,
+            .set_layout_count           = 1,
+            .set_layouts                = &set_layout,
             .render_pass                = pass,
             .subpass_index              = 0,
             .vertex_input_binding_count = 0,
@@ -213,9 +242,20 @@ int     main(i32 argc, char **argv)
 
     TIMER_LOG(t, "Vulkan init");
 
+    f32 rotation = 0.0f;
     b8 recreated = FALSE;
+
+    u64 time = platform_millis();
     while ( !glfwWindowShouldClose(window) )
     {
+        u64 now = platform_millis();
+        if( (now - time) < 16 )
+            continue;
+
+        time = now;
+
+        rotation += 0.01f;
+        vc_buffer_write_to(&ctx, rot_buf, 0, sizeof(f32), &rotation);
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
         u32 iid = 0;
@@ -263,6 +303,7 @@ int     main(i32 argc, char **argv)
             );
 
         vc_command_pipeline_bind(&ctx, buf, graphics_pipe);
+        vc_command_buffer_bind_descriptor_set(&ctx, buf, graphics_pipe, set);
         vc_command_draw(&ctx, buf, 3, 1, 0, 0);
 
         vc_command_render_pass_end(&ctx, buf);
@@ -274,7 +315,7 @@ int     main(i32 argc, char **argv)
             sem,
             (VkPipelineStageFlags[1]){[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT }
             );
-        vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
+        vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
 
         vc_swapchain_present_image(&ctx, iid);
 

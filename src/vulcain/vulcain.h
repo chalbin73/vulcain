@@ -386,11 +386,12 @@ typedef struct
  */
 typedef struct
 {
-    VkMemoryPropertyFlags    required_properties;
-    VkBufferUsageFlagBits    buffer_usage;
-    u64                      size;
-    b8                       share;
-    vc_queue_flags           queues;
+    VkMemoryPropertyFlags       required_properties;
+    VkBufferUsageFlagBits       buffer_usage;
+    u64                         size;
+    b8                          share;
+    vc_queue_flags              queues;
+    VmaAllocationCreateFlags    allocation_flags;
 } buffer_alloc_desc;
 
 /**
@@ -876,6 +877,8 @@ vc_descriptor_set_layout    vc_priv_desc_set_layout_get(vc_ctx *ctx, VkDescripto
  * @return vc_buffer A handle to the buffer
  */
 vc_buffer                   vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc);
+void                        vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data, vc_queue_type copy_queue);
+void                        vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data);
 
 /* ---------------- Images ---------------- */
 

@@ -112,7 +112,6 @@ void    vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer com
         vc_priv_man_graphics_pipe *grap_pipe = pipeline_obj;
         bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
         layout     = grap_pipe->layout;
-        return;
     }
     else
     {

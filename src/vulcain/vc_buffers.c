@@ -25,7 +25,7 @@ vc_buffer    vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc)
 
     VmaAllocationCreateInfo alloc_ci =
     {
-        .flags         = 0,
+        .flags         = alloc_desc.allocation_flags,
         .usage         = VMA_MEMORY_USAGE_AUTO,
         .requiredFlags = alloc_desc.required_properties,
         .priority      = 1.0f,
@@ -57,6 +57,17 @@ void    vc_buffer_unmap(vc_ctx *ctx, vc_buffer buffer)
     vmaUnmapMemory(ctx->vma_allocator, buf->allocation);
 }
 
+void    vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data)
+{
+    void *map = NULL;
+    vc_buffer_map(ctx, dest, &map);
+    void *offseted_map = (void *)( (u64)map + offset );
+    mem_memcpy(offseted_map, data, length);
+    vc_buffer_unmap(ctx, dest);
+}
+
+// This sould not be used in performance hungry operations, as it waits on the copy_queue for the staging buffer destruction
+// It is just a convinience function used in testing, staging writes are better made manually, with pipeline barriers
 void    vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data, vc_queue_type copy_queue)
 {
     vc_priv_man_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, dest);
@@ -100,6 +111,11 @@ void    vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset,
 
         vc_command_buffer_end(ctx, command_buffer);
         vc_command_buffer_submit(ctx, command_buffer, VC_NULL_HANDLE, NULL);
+
+        vkQueueWaitIdle(ctx->queues.queues[copy_queue]);
+
+        vc_handle_destroy(ctx, staging_buffer);
+
         return;
     }
 }
