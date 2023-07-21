@@ -197,3 +197,25 @@ void    vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 verte
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
     vkCmdDraw(buf->command_buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
+
+void    vc_command_draw_indexed(vc_ctx *ctx, vc_command_buffer command_buffer, u32 index_count, u32 instance_count, u32 first_index, int32_t vertex_offset, u32 first_instance)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vkCmdDrawIndexed(buf->command_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+}
+
+void    vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u32 binding, u64 offset)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vc_priv_man_buffer *vert_buf    = vc_handle_mgr_ptr(&ctx->handle_manager, buffer);
+
+    vkCmdBindVertexBuffers(buf->command_buffer, binding, 1, &vert_buf->buffer, &offset);
+}
+
+void    vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u64 offset, VkIndexType index_type)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vc_priv_man_buffer *index_buf   = vc_handle_mgr_ptr(&ctx->handle_manager, buffer);
+
+    vkCmdBindIndexBuffer(buf->command_buffer, index_buf->buffer, offset, index_type);
+}

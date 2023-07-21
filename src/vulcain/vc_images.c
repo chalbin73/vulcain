@@ -271,3 +271,36 @@ void    vc_image_create_full_image_view(vc_ctx *ctx, vc_image img)
         VK_CHECK(vkCreateImageView(ctx->vk_device, &img_view_ci, NULL, &image->full_image_view), "Could not create full subressource image view, when creating image.");
     }
 }
+
+u64    _vc_priv_hash_image_view_ci(VkImageViewCreateInfo *ci, u64 size)
+{
+    ASSERT(sizeof(VkImageViewCreateInfo) == size);
+
+    u64 hash = (u64)ci->image;
+    hash |= (u64)ci->flags >> 32;
+    hash ^= ci->format * ci->viewType;
+
+    u64 swizzle = ci->components.a |
+                  ci->components.r >> 3 |
+                  ci->components.g >> 6 |
+                  ci->components.b >> 9;
+    swizzle *= 201326611;
+    hash    ^= swizzle;
+
+    // Hash subressource range
+    u64 subres = ci->subresourceRange.aspectMask ^
+                 ci->subresourceRange.layerCount >> 4 ^
+                 ci->subresourceRange.levelCount >> 8 ^
+                 ci->subresourceRange.baseMipLevel >> 12 ^
+                 ci->subresourceRange.baseArrayLayer >> 16;
+    subres *= 100663319;
+    hash   ^= subres;
+
+    // I like making hash functions, i just make sure to take all the 64 bits, multiply by big random primes, and xor everything (i have no idea of what i'm
+    // actually doing)
+
+    return hash;
+}
+
+void    vc_priv_image_view_acquire(vc_ctx *ctx, view_ci)
+{ }

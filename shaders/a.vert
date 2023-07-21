@@ -14,20 +14,16 @@ vec3 colors[3] = vec3[](
 
 layout (location = 0) out vec3 color;
 
+layout (location = 0) in vec3 vert_pos;
+
 layout (set = 0, binding = 0) uniform ubo
 {
-    float rotation;
+    mat4 prj;
 };
 
 void main() {
-    vec2 pos = positions[gl_VertexIndex];
-    mat2 rot;
 
-    rot[0] = vec2(cos(rotation), sin(rotation));
-    rot[1] = vec2(-sin(rotation), cos(rotation));
-
-    pos = rot * pos;
-
-    gl_Position = vec4(pos, 0.0, 1.0);
-    color = colors[gl_VertexIndex];
+    vec4 new_pos = vec4(vert_pos, 1.0);
+    new_pos.z -= 0.5f;
+    gl_Position = prj * new_pos;
 }

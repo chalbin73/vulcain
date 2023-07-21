@@ -776,6 +776,20 @@ void                        vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_
  */
 void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
 
+
+/**
+ * @brief Draws a indexed mesh, vertex buffer and index buffer must have been bound before
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param index_count The number of indices to draw
+ * @param instance_count
+ * @param first_index
+ * @param vertex_offset
+ * @param first_instance
+ */
+void                        vc_command_draw_indexed(vc_ctx *ctx, vc_command_buffer command_buffer, u32 index_count, u32 instance_count, u32 first_index, int32_t vertex_offset, u32 first_instance);
+
 /**
  * @brief Copies a buffer into another
  *
@@ -787,6 +801,9 @@ void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer comma
  * @param regions The regions to copy
  */
 void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer src, vc_buffer dst, u32 region_count, VkBufferCopy *regions);
+
+void                        vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u32 binding, u64 offset);
+void                        vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u64 offset, VkIndexType index_type);
 
 /* ---------------- Synchronisation ---------------- */
 

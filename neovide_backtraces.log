@@ -1,0 +1,50 @@
+2023-07-19 14:57:00 - Neovide panicked with the message 'If dragging, there should be a window details recorded'. (File: src/window/mouse_manager.rs; Line: 128, Column: 26)
+   0: <unknown>
+   1: <unknown>
+   2: <unknown>
+   3: <unknown>
+   4: <unknown>
+   5: <unknown>
+   6: <unknown>
+   7: <unknown>
+   8: <unknown>
+   9: <unknown>
+  10: <unknown>
+  11: <unknown>
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: __libc_start_main
+  22: <unknown>
+
+2023-07-19 14:57:02 - Neovide panicked with the message 'If dragging, there should be a window details recorded'. (File: src/window/mouse_manager.rs; Line: 128, Column: 26)
+   0: <unknown>
+   1: <unknown>
+   2: <unknown>
+   3: <unknown>
+   4: <unknown>
+   5: <unknown>
+   6: <unknown>
+   7: <unknown>
+   8: <unknown>
+   9: <unknown>
+  10: <unknown>
+  11: <unknown>
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: __libc_start_main
+  22: <unknown>
+

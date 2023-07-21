@@ -115,7 +115,7 @@ vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc 
 // Prepare attributes
     for(int i = 0; i < desc.vertex_input_binding_count; i++)
     {
-        for(int j = 0; j < desc.vertex_input_bindings[i].attribute_count; i++)
+        for(int j = 0; j < desc.vertex_input_bindings[i].attribute_count; j++)
         {
             input_attributes[idx++] = (VkVertexInputAttributeDescription)
             {

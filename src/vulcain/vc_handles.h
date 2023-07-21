@@ -34,6 +34,7 @@ typedef enum
     VC_HANDLE_COMMAND_BUFFER,
     VC_HANDLE_SEMAPHORE,
     VC_HANDLE_IMAGE,
+    VC_HANDLE_IMAGE_VIEW,
     VC_HANDLE_BUFFER,
     VC_HANDLE_DESCRIPTOR_SET_LAYOUT,
     VC_HANDLE_DESCRIPTOR_SET,
@@ -63,6 +64,7 @@ VC_DEF_HANDLE(vc_graphics_pipe);
 VC_DEF_HANDLE(vc_semaphore);
 VC_DEF_HANDLE(vc_command_buffer);
 VC_DEF_HANDLE(vc_image);
+VC_DEF_HANDLE(vc_image_view);
 VC_DEF_HANDLE(vc_buffer);
 VC_DEF_HANDLE(vc_descriptor_set_layout);
 VC_DEF_HANDLE(vc_descriptor_set);

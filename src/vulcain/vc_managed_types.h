@@ -51,6 +51,11 @@ typedef struct
 
 typedef struct
 {
+    VkImageView image_view;
+} vc_priv_man_image_view;
+
+typedef struct
+{
     VkDescriptorSetLayout    set_layout;
     u64                      hash;
 } vc_priv_man_descriptor_set_layout;

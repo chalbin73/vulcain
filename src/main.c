@@ -1,4 +1,3 @@
-#include "base/fio.h"
 #include "vulcain/vc_handles.h"
 #include <vulkan/vulkan_core.h>
 #define VC_ENABLE_WINDOWING_GLFW 1
@@ -6,6 +5,9 @@
 #include "base/base.h"
 #include "vulcain/vulcain.h"
 #include <GLFW/glfw3.h>
+#include <fast_obj.h>
+#include <mathc.h>
+#include <math.h>
 
 GLFWwindow *window;
 
@@ -13,13 +15,10 @@ vc_framebuffer *frambuffers;
 VkExtent2D fb_size;
 
 vc_semaphore sem;
-
 void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info info)
 {
-    FATAL("OH MY GOD HERE'S A NEW SWAPCHAIN GODDAMIT (%dx%d)", info.width, info.height);
     frambuffers = mem_allocate(sizeof(vc_framebuffer) * info.image_count, MEMORY_TAG_RENDERER);
-
-    for(int i = 0; i < info.image_count; i++)
+    for (int i = 0; i < info.image_count; i++)
     {
         render_attachments_set render_att =
         {
@@ -29,8 +28,7 @@ void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info in
 
         frambuffers[i] = vc_framebuffer_create(
             ctx,
-            (framebuffer_desc)
-            {
+            (framebuffer_desc){
                 .attachment_set = render_att,
                 .render_pass    = *( (vc_render_pass *)data ),
                 .layers         = 1,
@@ -49,7 +47,6 @@ void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info in
 void    swp_destruction_cllbck(vc_ctx *ctx, void *data)
 {
     mem_free(frambuffers);
-    FATAL("OH MY GOD NO I'M BEING DESTROYED !!");
 }
 
 int     main(i32 argc, char **argv)
@@ -64,6 +61,10 @@ int     main(i32 argc, char **argv)
     glfwShowWindow(window);
     u32 exts_count    = 0;
     const char **exts = glfwGetRequiredInstanceExtensions(&exts_count);
+
+    f32 projection_matrix[MAT4_SIZE];
+
+    mat4_perspective(projection_matrix, 3.1415f / 2.0f, 16.0f / 9.0f, 0.01f, 1000.0f);
 
     timer t = TIMER_START();
 
@@ -94,17 +95,14 @@ int     main(i32 argc, char **argv)
 
     vc_swapchain_setup(
         &ctx,
-        (swapchain_configuration_query)
-        { }
+        (swapchain_configuration_query){ }
         );
 
     vc_render_pass pass = vc_render_pass_create(
         &ctx,
-        (render_pass_desc)
-        {
+        (render_pass_desc){
             .attachment_count = 1,
-            .attachment_desc  = (render_pass_attachment_params[1])
-            {
+            .attachment_desc  = (render_pass_attachment_params[1]){
                 [0] =
                 {
                     .load_op  = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -122,22 +120,18 @@ int     main(i32 argc, char **argv)
             },
 
             .subpass_count  = 1,
-            .subpasses_desc = (subpass_desc[1])
-            {
-                [0] =
-                {
-                    .pipline_type                 = VC_PIPELINE_TYPE_GRAPHICS,
-                    .input_attachment_count       = 0,
-                    .color_attachment_count       = 1,
-                    .color_attachment_refs        = &(VkAttachmentReference){ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-                    .preserve_attachment_count    = 0,
-                    .depth_stencil_attachment_ref = NULL,
-                }
-            },
+            .subpasses_desc = (subpass_desc[1]){[0] =
+                                                {
+                                                    .pipline_type                 = VC_PIPELINE_TYPE_GRAPHICS,
+                                                    .input_attachment_count       = 0,
+                                                    .color_attachment_count       = 1,
+                                                    .color_attachment_refs        = &(VkAttachmentReference){ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+                                                    .preserve_attachment_count    = 0,
+                                                    .depth_stencil_attachment_ref = NULL,
+                                                } },
 
             .subpass_dependency_count = 1,
-            .subpass_dependencies     = &(subpass_dependency_desc)
-            {
+            .subpass_dependencies     = &(subpass_dependency_desc){
                 .src_id = VK_SUBPASS_EXTERNAL,
                 .dst_id = 0,
 
@@ -152,8 +146,7 @@ int     main(i32 argc, char **argv)
 
     vc_swapchain_commit(
         &ctx,
-        (swapchain_desc)
-        {
+        (swapchain_desc){
             .swapchain_images_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             .callback_user_data     = (void *)&pass,
             .recreation_callback    = swp_recreation_cllbck,
@@ -161,13 +154,12 @@ int     main(i32 argc, char **argv)
         }
         );
 
-    vc_buffer rot_buf = vc_buffer_allocate(
+    vc_buffer prj_buf = vc_buffer_allocate(
         &ctx,
-        (buffer_alloc_desc)
-        {
+        (buffer_alloc_desc){
             .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-            .size                = sizeof(f32),
+            .size                = sizeof(projection_matrix),
             .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .share               = FALSE,
         }
@@ -176,21 +168,56 @@ int     main(i32 argc, char **argv)
     descriptor_set_desc desc_set_desc =
     {
         .binding_count = 1,
-        .bindings      = &(descriptor_binding_desc)
-        {
+        .bindings      = &(descriptor_binding_desc){
             .descriptor_type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptor_count = 1,
             .stage_flags      = VK_SHADER_STAGE_VERTEX_BIT,
-            .buffer_info      = &(descriptor_binding_buffer)
-            {
-                .buffer       = rot_buf,
+            .buffer_info      = &(descriptor_binding_buffer){
+                .buffer       = prj_buf,
                 .whole_buffer = TRUE,
             }
         }
     };
+    vc_buffer_coherent_staged_write(&ctx, prj_buf, 0, sizeof(projection_matrix), projection_matrix, VC_QUEUE_MAIN);
 
     vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, desc_set_desc);
     vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
+
+    fastObjMesh *mesh = fast_obj_read("test_res/rat.obj");
+
+    vc_buffer index_buffer = vc_buffer_allocate(
+        &ctx,
+        (buffer_alloc_desc)
+        {
+            .size                = sizeof(u32) * mesh->index_count,
+            .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            .share               = FALSE,
+            .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        }
+        );
+
+
+    vc_buffer vertex_buffer = vc_buffer_allocate(
+        &ctx,
+        (buffer_alloc_desc)
+        {
+            .size                = sizeof(u32) * mesh->index_count,
+            .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            .share               = FALSE,
+            .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        }
+        );
+
+    u32 index_count = mesh->index_count;
+    TRACE("Wrinting indices");
+    vc_buffer_coherent_staged_write(&ctx, index_buffer, 0, mesh->index_count * sizeof(u32), mesh->indices, VC_QUEUE_MAIN);
+    TRACE("Wrinting vertices");
+    vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(f32), mesh->positions, VC_QUEUE_MAIN);
+
+    TRACE("Mesh loaded");
+    //fast_obj_destroy(mesh);
 
 
     graphics_pipeline_code_desc code;
@@ -199,29 +226,37 @@ int     main(i32 argc, char **argv)
     code.fragment_code        = fio_read_whole_file("shaders/a.frag.spv", &code.fragment_code_size);
     code.fragment_entry_point = "main";
 
-
     vc_graphics_pipe graphics_pipe = vc_graphics_pipe_create(
         &ctx,
-        (graphics_pipeline_desc)
-        {
+        (graphics_pipeline_desc){
             .shader_code                = code,
-            .set_layout_count           = 1,
-            .set_layouts                = &set_layout,
-            .render_pass                = pass,
-            .subpass_index              = 0,
-            .vertex_input_binding_count = 0,
-            .topology                   = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            .line_width                 = 1.0f,
-            .viewport_scissor_count     = 1,
-            .depth_test                 = FALSE,
-            .stencil_test               = FALSE,
-            .enable_depth_clamp         = FALSE,
-            .enable_depth_bias          = FALSE,
-            .sample_count               = VK_SAMPLE_COUNT_1_BIT,
-            .sample_shading             = FALSE,
-            .attchment_count            = 1,
-            .attchment_blends           = &(VkPipelineColorBlendAttachmentState)
+            .vertex_input_binding_count = 1,
+            .vertex_input_bindings      = &(graphics_pipeline_in_binding)
             {
+                .stride          = sizeof(f32) * 3,
+                .input_rate      = VK_VERTEX_INPUT_RATE_VERTEX,
+                .attribute_count = 1,
+                .attributes      = &(graphics_pipeline_in_attrib)
+                {
+                    .format = VK_FORMAT_R32G32B32_SFLOAT,
+                    .offset = 0,
+                },
+            },
+            .set_layout_count       = 1,
+            .set_layouts            = &set_layout,
+            .render_pass            = pass,
+            .subpass_index          = 0,
+            .topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .line_width             = 1.0f,
+            .viewport_scissor_count = 1,
+            .depth_test             = FALSE,
+            .stencil_test           = FALSE,
+            .enable_depth_clamp     = FALSE,
+            .enable_depth_bias      = FALSE,
+            .sample_count           = VK_SAMPLE_COUNT_1_BIT,
+            .sample_shading         = FALSE,
+            .attchment_count        = 1,
+            .attchment_blends       = &(VkPipelineColorBlendAttachmentState){
                 .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
                 .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
                 .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
@@ -242,30 +277,27 @@ int     main(i32 argc, char **argv)
 
     TIMER_LOG(t, "Vulkan init");
 
-    f32 rotation = 0.0f;
     b8 recreated = FALSE;
 
     u64 time = platform_millis();
     while ( !glfwWindowShouldClose(window) )
     {
         u64 now = platform_millis();
-        if( (now - time) < 16 )
+        if ( (now - time) < 16 )
             continue;
 
         time = now;
 
-        rotation += 0.01f;
-        vc_buffer_write_to(&ctx, rot_buf, 0, sizeof(f32), &rotation);
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
         u32 iid = 0;
-        if( !vc_swapchain_acquire_image(&ctx, &iid, sem) )
+        if ( !vc_swapchain_acquire_image(&ctx, &iid, sem) )
         {
             continue;
         }
-        //vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
+        // vc_image curi = vc_swapchain_get_image_hndls(&ctx)[iid];
 
-        if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !recreated)
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !recreated)
         {
             recreated = TRUE;
             vc_swapchain_force_recreation(&ctx);
@@ -299,12 +331,19 @@ int     main(i32 argc, char **argv)
             &ctx,
             buf,
             1,
-            &(VkRect2D){ { 0, 0 }, fb_size }
+            &(VkRect2D){
+                { 0, 0 },
+                fb_size
+            }
             );
 
         vc_command_pipeline_bind(&ctx, buf, graphics_pipe);
         vc_command_buffer_bind_descriptor_set(&ctx, buf, graphics_pipe, set);
-        vc_command_draw(&ctx, buf, 3, 1, 0, 0);
+
+        vc_command_bind_index_buffer(&ctx, buf, index_buffer, 0, VK_INDEX_TYPE_UINT32);
+        vc_command_bind_vertex_buffer(&ctx, buf, vertex_buffer, 0, 0);
+
+        vc_command_draw_indexed(&ctx, buf, index_count, 1, 0, 0, 0);
 
         vc_command_render_pass_end(&ctx, buf);
 
