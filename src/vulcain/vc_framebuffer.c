@@ -20,13 +20,15 @@ vc_framebuffer    vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc)
         .layers          = desc.layers // Still not sure 'bout that
     };
 
+    vc_priv_man_image_view *img_view;
     vc_priv_man_image *img;
     framebuffer_ci.pAttachments = mem_allocate(sizeof(VkImageView) * desc.attachment_set.attachment_count, MEMORY_TAG_RENDERER);
     for(int i = 0; i < framebuffer_ci.attachmentCount; i++)
     {
-        img = vc_handle_mgr_ptr(&ctx->handle_manager, desc.attachment_set.attachments[i]);
+        img_view = vc_handle_mgr_ptr(&ctx->handle_manager, desc.attachment_set.attachments[i]);
+        img      = vc_handle_mgr_ptr(&ctx->handle_manager, img_view->parent_image);
 
-        ( (VkImageView *)framebuffer_ci.pAttachments )[i] = img->full_image_view; // TODO: Allow alternative image view
+        ( (VkImageView *)framebuffer_ci.pAttachments )[i] = img_view->image_view;
 
         // Infer frambuffer width and height from image sizes
         // Images can be smaller that the frambuffer's size

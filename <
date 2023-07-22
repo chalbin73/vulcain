@@ -19,46 +19,13 @@ vc_image_view depth_buffer_view;
 vc_semaphore sem;
 void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info info)
 {
-    depth_buffer = vc_image_allocate(
-        ctx,
-        (image_create_desc)
-        {
-            .width           = info.width,
-            .height          = info.height,
-            .depth           = 1,
-            .share           = FALSE,
-            .layout          = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-            .image_dimension = 2,
-            .sample_count    = VK_SAMPLE_COUNT_1_BIT,
-            .image_usage     = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            .image_format    = vc_swapchain_configuration_get(ctx).depth_format,
-        }
-        );
-
-    INFO( "Creating depth buffer with : %s", vc_priv_VkFormat_to_str(vc_swapchain_configuration_get(ctx).depth_format) );
-
-    depth_buffer_view = vc_image_view_create(
-        ctx,
-        depth_buffer,
-        (image_view_desc)
-        {
-            .view_type                        = VK_IMAGE_VIEW_TYPE_2D,
-            .component_mapping                = VC_COMPONENT_MAPPING_ID,
-            .subresource_range.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .subresource_range.layerCount     = 1,
-            .subresource_range.levelCount     = 1,
-            .subresource_range.baseMipLevel   = 0,
-            .subresource_range.baseArrayLayer = 0,
-        }
-        );
-
     frambuffers = mem_allocate(sizeof(vc_framebuffer) * info.image_count, MEMORY_TAG_RENDERER);
     for (int i = 0; i < info.image_count; i++)
     {
         render_attachments_set render_att =
         {
-            .attachment_count = 2,
-            .attachments      = (vc_image_view[2]){ vc_swapchain_get_image_view_hndls(ctx)[i], depth_buffer_view }
+            .attachment_count = 1,
+            .attachments      = (vc_image[1]){ vc_swapchain_get_image_hndls(ctx)[i] }
         };
 
         frambuffers[i] = vc_framebuffer_create(
@@ -78,6 +45,35 @@ void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info in
 
     sem = vc_semaphore_create(ctx);
 
+    depth_buffer = vc_image_allocate(
+        ctx,
+        (image_create_desc)
+        {
+            .width           = info.width,
+            .height          = info.height,
+            .depth           = 1,
+            .share           = FALSE,
+            .layout          = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .image_dimension = 2,
+            .sample_count    = VK_SAMPLE_COUNT_1_BIT,
+            .image_format    = vc_swapchain_configuration_get(ctx).depth_format,
+        }
+        );
+
+    depth_buffer_view = vc_image_view_create(
+        ctx,
+        depth_buffer,
+        (image_view_desc)
+        {
+            .view_type                        = VK_IMAGE_VIEW_TYPE_2D,
+            .component_mapping                = VC_COMPONENT_MAPPING_ID,
+            .subresource_range.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .subresource_range.layerCount     = 1,
+            .subresource_range.levelCount     = 1,
+            .subresource_range.baseMipLevel   = 0,
+            .subresource_range.baseArrayLayer = 0,
+        }
+        );
 }
 
 void    swp_destruction_cllbck(vc_ctx *ctx, void *data)
@@ -137,8 +133,8 @@ int     main(i32 argc, char **argv)
     vc_render_pass pass = vc_render_pass_create(
         &ctx,
         (render_pass_desc){
-            .attachment_count = 2,
-            .attachment_desc  = (render_pass_attachment_params[2]){
+            .attachment_count = 1,
+            .attachment_desc  = (render_pass_attachment_params[1]){
                 [0] =
                 {
                     .load_op  = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -152,22 +148,7 @@ int     main(i32 argc, char **argv)
 
                     .attachment_format        = vc_swapchain_configuration_get(&ctx).swapchain_format.format,
                     .attachment_sample_counts = VK_SAMPLE_COUNT_1_BIT,
-                },
-                [1] =
-                {
-
-                    .load_op  = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    .store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-
-                    .stencil_load_op  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    .stencil_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-
-                    .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .final_layout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-
-                    .attachment_format        = vc_swapchain_configuration_get(&ctx).depth_format,
-                    .attachment_sample_counts = VK_SAMPLE_COUNT_1_BIT,
-                },
+                }
             },
 
             .subpass_count  = 1,
@@ -176,9 +157,9 @@ int     main(i32 argc, char **argv)
                                                     .pipline_type                 = VC_PIPELINE_TYPE_GRAPHICS,
                                                     .input_attachment_count       = 0,
                                                     .color_attachment_count       = 1,
-                                                    .color_attachment_refs        = &(VkAttachmentReference){ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL         },
-                                                    .depth_stencil_attachment_ref = &(VkAttachmentReference){ .attachment = 1,.layout                  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL },
+                                                    .color_attachment_refs        = &(VkAttachmentReference){ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
                                                     .preserve_attachment_count    = 0,
+                                                    .depth_stencil_attachment_ref = NULL,
                                                 } },
 
             .subpass_dependency_count = 1,
@@ -210,7 +191,7 @@ int     main(i32 argc, char **argv)
         (buffer_alloc_desc){
             .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-            .size                = sizeof(projection_matrix) + sizeof(float),
+            .size                = sizeof(projection_matrix),
             .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .share               = FALSE,
         }
@@ -253,7 +234,7 @@ int     main(i32 argc, char **argv)
         &ctx,
         (buffer_alloc_desc)
         {
-            .size                = sizeof(f32) * mesh->position_count,
+            .size                = sizeof(u32) * mesh->index_count,
             .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             .share               = FALSE,
             .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -261,27 +242,11 @@ int     main(i32 argc, char **argv)
         }
         );
 
-    struct vert
-    {
-        f32    pos[3];
-    };
-
-    struct vert *verts = mem_allocate(mesh->position_count * sizeof(struct vert), MEMORY_TAG_RENDERER);
-    u32 *indices       = mem_allocate(sizeof(u32) * mesh->index_count, MEMORY_TAG_RENDERER);
-    for(int i = 0; i < mesh->index_count; i++)
-    {
-        indices[i] = mesh->indices[i].p;
-
-        verts[indices[i]].pos[0] = mesh->positions[indices[i] * 3];
-        verts[indices[i]].pos[1] = mesh->positions[indices[i] * 3 + 1];
-        verts[indices[i]].pos[2] = mesh->positions[indices[i] * 3 + 2];
-    }
-
     u32 index_count = mesh->index_count;
     TRACE("Wrinting indices");
-    vc_buffer_coherent_staged_write(&ctx, index_buffer, 0, mesh->index_count * sizeof(u32), indices, VC_QUEUE_MAIN);
+    vc_buffer_coherent_staged_write(&ctx, index_buffer, 0, mesh->index_count * sizeof(u32), mesh->indices, VC_QUEUE_MAIN);
     TRACE("Wrinting vertices");
-    vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(struct vert), verts, VC_QUEUE_MAIN);
+    vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(f32), mesh->positions, VC_QUEUE_MAIN);
 
     TRACE("Mesh loaded");
     //fast_obj_destroy(mesh);
@@ -314,13 +279,9 @@ int     main(i32 argc, char **argv)
             .render_pass            = pass,
             .subpass_index          = 0,
             .topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            .cull_mode              = VK_CULL_MODE_NONE,
-            .front_face             = VK_FRONT_FACE_CLOCKWISE,
             .line_width             = 1.0f,
             .viewport_scissor_count = 1,
-            .depth_test             = TRUE,
-            .depth_write            = TRUE,
-            .depth_compare_op       = VK_COMPARE_OP_LESS,
+            .depth_test             = FALSE,
             .stencil_test           = FALSE,
             .enable_depth_clamp     = FALSE,
             .enable_depth_bias      = FALSE,
@@ -358,13 +319,9 @@ int     main(i32 argc, char **argv)
             continue;
 
         time = now;
-        f32 t = (f32)time / 1000.0f;
 
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
-
-        vc_buffer_coherent_staged_write(&ctx, prj_buf, sizeof(projection_matrix), sizeof(f32), &t, VC_QUEUE_MAIN);
-
         u32 iid = 0;
         if ( !vc_swapchain_acquire_image(&ctx, &iid, sem) )
         {
@@ -389,12 +346,9 @@ int     main(i32 argc, char **argv)
                 .pass              = pass,
                 .render_area       = (VkRect2D){ { 0, 0 }, fb_size },
                 .subpass_contents  = VK_SUBPASS_CONTENTS_INLINE,
-                .clear_value_count = 2,
-                .clear_values      = (VkClearValue[2]){
-                    [0] = { .color = { { 1, 1, 1, 1 } } },
-                    [1] = { .depthStencil = { .depth = 1.0f, .stencil = 0 } }
-                },
-                .frambuffer = frambuffers[iid],
+                .clear_value_count = 1,
+                .clear_values      = &(VkClearValue){ .color = { { 1, 1, 1, 1 } } },
+                .frambuffer        = frambuffers[iid],
             }
             );
 
@@ -418,8 +372,8 @@ int     main(i32 argc, char **argv)
         vc_command_pipeline_bind(&ctx, buf, graphics_pipe);
         vc_command_buffer_bind_descriptor_set(&ctx, buf, graphics_pipe, set);
 
-        vc_command_bind_vertex_buffer(&ctx, buf, vertex_buffer, 0, 0);
         vc_command_bind_index_buffer(&ctx, buf, index_buffer, 0, VK_INDEX_TYPE_UINT32);
+        vc_command_bind_vertex_buffer(&ctx, buf, vertex_buffer, 0, 0);
 
         vc_command_draw_indexed(&ctx, buf, index_count, 1, 0, 0, 0);
 

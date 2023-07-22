@@ -81,11 +81,12 @@ vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc d
         if (desc_set_desc.bindings[i].image_info)
         {
             descriptor_binding_image *image_binding = desc_set_desc.bindings[i].image_info;
-            vc_priv_man_image *man_img              = vc_handle_mgr_ptr(&ctx->handle_manager, image_binding->image);
             writes[i].pImageInfo = &(VkDescriptorImageInfo)
             {
-                .sampler     = VK_NULL_HANDLE,
-                .imageView   = man_img->full_image_view,
+                .sampler = image_binding->sampler ?
+                           ( (vc_priv_man_image_sampler *)vc_handle_mgr_ptr(&ctx->handle_manager, image_binding->sampler) )->sampler : VK_NULL_HANDLE,
+                .imageView = image_binding->image_view ?
+                             ( (vc_priv_man_image_view *)vc_handle_mgr_ptr(&ctx->handle_manager, image_binding->image_view) )->image_view : VK_NULL_HANDLE,
                 .imageLayout = image_binding->layout,
             };
         }

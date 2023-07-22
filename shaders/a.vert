@@ -19,11 +19,20 @@ layout (location = 0) in vec3 vert_pos;
 layout (set = 0, binding = 0) uniform ubo
 {
     mat4 prj;
+    float time;
 };
 
 void main() {
+    mat2 rot;
+    rot[0] = vec2(cos(time), sin(time));
+    rot[1] = vec2(-sin(time), cos(time));
 
-    vec4 new_pos = vec4(vert_pos, 1.0);
-    new_pos.z -= 0.5f;
-    gl_Position = prj * new_pos;
+    vec2 hp = vec2(vert_pos.x, vert_pos.y);
+    hp = rot * hp;
+
+    vec3 new_pos = vec3(hp, vert_pos.z);
+    new_pos *= 0.4f;
+    new_pos.z -= 0.15f;
+    new_pos.x -= 0.1f;
+    gl_Position = prj * vec4(new_pos, 1.0);
 }

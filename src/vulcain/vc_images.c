@@ -1,16 +1,11 @@
 #include "../base/base.h"
+#include "vc_private.h"
 #include "vc_managed_types.h"
 #include "vulcain.h"
 #include <vulkan/vulkan_core.h>
 
-b8    _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image)
+b8      _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image)
 {
-    if(image->full_image_view != VK_NULL_HANDLE)
-    {
-        vkDestroyImageView(ctx->vk_device, image->full_image_view, NULL);
-        image->full_image_view = VK_NULL_HANDLE;
-    }
-
     if(!image->external)
     {
         vmaDestroyImage(ctx->vma_allocator, image->image, image->allocation);
@@ -18,21 +13,23 @@ b8    _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image)
     return TRUE;
 }
 
-void    vc_command_image_pipe_barrier(vc_ctx                 *ctx,
-                                      vc_command_buffer       command_buffer,
-                                      vc_image                image,
+void    vc_command_image_pipe_barrier(vc_ctx                    *ctx,
+                                      vc_command_buffer          command_buffer,
+                                      vc_image                   image,
 
-                                      VkImageLayout           src_layout,
-                                      VkImageLayout           dst_layout,
+                                      VkImageLayout              src_layout,
+                                      VkImageLayout              dst_layout,
 
-                                      VkPipelineStageFlags    from,
-                                      VkPipelineStageFlags    to,
+                                      VkPipelineStageFlags       from,
+                                      VkPipelineStageFlags       to,
 
-                                      VkAccessFlags           src_access,
-                                      VkAccessFlags           dst_access,
+                                      VkAccessFlags              src_access,
+                                      VkAccessFlags              dst_access,
 
-                                      vc_queue_type           src_queue,
-                                      vc_queue_type           dst_queue
+                                      vc_queue_type              src_queue,
+                                      vc_queue_type              dst_queue,
+
+                                      VkImageSubresourceRange    subresource_range
                                       )
 
 {
@@ -41,16 +38,9 @@ void    vc_command_image_pipe_barrier(vc_ctx                 *ctx,
 
     VkImageMemoryBarrier bar =
     {
-        .sType            = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .image            = img->image,
-        .subresourceRange =
-        {
-            .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseArrayLayer = 0,
-            .baseMipLevel   = 0,
-            .layerCount     = 1,
-            .levelCount     = 1,
-        },
+        .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .image               = img->image,
+        .subresourceRange    = subresource_range,
         .oldLayout           = src_layout,
         .newLayout           = dst_layout,
         .srcAccessMask       = src_access,
@@ -97,9 +87,10 @@ void    vc_command_simple_image_copy(vc_ctx              *ctx,
 
 // Performs a simple, unoptimized layout transition, used when creating/transfering, and should not be used in performance application
 // TODO: Make a image transtion routine, that takes an array of images
-void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue)
+void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect)
 {
-    vc_command_buffer buf = vc_command_buffer_main_create(ctx, queue);
+    vc_command_buffer buf  = vc_command_buffer_main_create(ctx, queue);
+    vc_priv_man_image *img = vc_handle_mgr_ptr(&ctx->handle_manager, image);
     vc_command_buffer_begin(ctx, buf);
 
     vc_command_image_pipe_barrier(
@@ -113,7 +104,15 @@ void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout sr
         VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
         VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
         VC_QUEUE_IGNORED,
-        VC_QUEUE_IGNORED
+        VC_QUEUE_IGNORED,
+        (VkImageSubresourceRange)
+        {
+            .aspectMask     = aspect,
+            .layerCount     = img->image_desc.layer_count,
+            .levelCount     = img->image_desc.mip_levels,
+            .baseMipLevel   = 0,
+            .baseArrayLayer = 0,
+        }
         );
     vc_command_buffer_end(ctx, buf);
     vc_command_buffer_submit(ctx, buf, VC_NULL_HANDLE, NULL);
@@ -211,96 +210,74 @@ vc_image    vc_image_allocate(vc_ctx *ctx, image_create_desc desc)
     vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, (vc_man_destroy_func)_vc_priv_image_destroy);
     vc_image img_hndl = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE, &img);
 
-    // Transition layout
-    if (desc.layout != VK_IMAGE_LAYOUT_UNDEFINED)
-    {
-        vc_image_transition_layout(ctx, img_hndl, VK_IMAGE_LAYOUT_UNDEFINED, desc.layout, VC_QUEUE_MAIN); // TODO: Select valid queue
-    }
-
-    // Setup image view
-    vc_image_create_full_image_view(ctx, img_hndl);
-
-
-
     return img_hndl;
 }
 
-void    vc_image_create_full_image_view(vc_ctx *ctx, vc_image img)
+b8               _vc_priv_image_view_destroy(vc_ctx *ctx, vc_priv_man_image_view *img)
 {
-    vc_priv_man_image *image = vc_handle_mgr_ptr(&ctx->handle_manager, img);
-    if(image->full_image_view == VK_NULL_HANDLE)
+    vkDestroyImageView(ctx->vk_device, img->image_view, NULL);
+    return TRUE;
+}
+
+vc_image_view    vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc)
+{
+    vc_priv_man_image *img        = vc_handle_mgr_ptr(&ctx->handle_manager, image);
+    VkImageViewCreateInfo view_ci =
     {
+        .sType            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image            = img->image,
+        .viewType         = desc.view_type,
+        .format           = img->image_desc.image_format,
+        .subresourceRange = desc.subresource_range,
+        .components       = desc.component_mapping,
+    };
 
-        // Create full image view
-        VkImageViewCreateInfo img_view_ci =
-        {
-            .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image    = image->image,
-            .viewType =
-                (image->image_desc.image_dimension == 1 ? VK_IMAGE_VIEW_TYPE_1D : 0) |
-                (image->image_desc.image_dimension == 2 ? VK_IMAGE_VIEW_TYPE_2D : 0) |
-                (image->image_desc.image_dimension == 3 ? VK_IMAGE_VIEW_TYPE_3D : 0),
-            .format                          = image->image_desc.image_format,
-            .components.a                    = VK_COMPONENT_SWIZZLE_A,
-            .components.r                    = VK_COMPONENT_SWIZZLE_R,
-            .components.g                    = VK_COMPONENT_SWIZZLE_G,
-            .components.b                    = VK_COMPONENT_SWIZZLE_B,
-            .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, // TODO: Make this modifiable, wtf moron, only supporting color ? (no depth ?D)
-            .subresourceRange.baseArrayLayer = 0,
-            .subresourceRange.baseMipLevel   = 0,
-            .subresourceRange.levelCount     = image->image_desc.mip_levels,
-            .subresourceRange.layerCount     = image->image_desc.layer_count,
-        };
 
-        // ———————————No depth ?———————————
-        // ⠀⣞⢽⢪⢣⢣⢣⢫⡺⡵⣝⡮⣗⢷⢽⢽⢽⣮⡷⡽⣜⣜⢮⢺⣜⢷⢽⢝⡽⣝
-        // ⠸⡸⠜⠕⠕⠁⢁⢇⢏⢽⢺⣪⡳⡝⣎⣏⢯⢞⡿⣟⣷⣳⢯⡷⣽⢽⢯⣳⣫⠇
-        // ⠀⠀⢀⢀⢄⢬⢪⡪⡎⣆⡈⠚⠜⠕⠇⠗⠝⢕⢯⢫⣞⣯⣿⣻⡽⣏⢗⣗⠏⠀
-        // ⠀⠪⡪⡪⣪⢪⢺⢸⢢⢓⢆⢤⢀⠀⠀⠀⠀⠈⢊⢞⡾⣿⡯⣏⢮⠷⠁⠀⠀
-        // ⠀⠀⠀⠈⠊⠆⡃⠕⢕⢇⢇⢇⢇⢇⢏⢎⢎⢆⢄⠀⢑⣽⣿⢝⠲⠉⠀⠀⠀⠀
-        // ⠀⠀⠀⠀⠀⡿⠂⠠⠀⡇⢇⠕⢈⣀⠀⠁⠡⠣⡣⡫⣂⣿⠯⢪⠰⠂⠀⠀⠀⠀
-        // ⠀⠀⠀⠀⡦⡙⡂⢀⢤⢣⠣⡈⣾⡃⠠⠄⠀⡄⢱⣌⣶⢏⢊⠂⠀⠀⠀⠀⠀⠀
-        // ⠀⠀⠀⠀⢝⡲⣜⡮⡏⢎⢌⢂⠙⠢⠐⢀⢘⢵⣽⣿⡿⠁⠁⠀⠀⠀⠀⠀⠀⠀
-        // ⠀⠀⠀⠀⠨⣺⡺⡕⡕⡱⡑⡆⡕⡅⡕⡜⡼⢽⡻⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        // ⠀⠀⠀⠀⣼⣳⣫⣾⣵⣗⡵⡱⡡⢣⢑⢕⢜⢕⡝⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        // ⠀⠀⠀⣴⣿⣾⣿⣿⣿⡿⡽⡑⢌⠪⡢⡣⣣⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        // ⠀⠀⠀⡟⡾⣿⢿⢿⢵⣽⣾⣼⣘⢸⢸⣞⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        // ⠀⠀⠀⠀⠁⠇⠡⠩⡫⢿⣝⡻⡮⣒⢽⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        // —————————————————————————————
+    vc_priv_man_image_view view_man =
+    {
+        0
+    };
+    VK_CHECKH(vkCreateImageView(ctx->vk_device, &view_ci, NULL, &view_man.image_view), "Could not create a image view.");
+    view_man.parent_image = image;
 
-        VK_CHECK(vkCreateImageView(ctx->vk_device, &img_view_ci, NULL, &image->full_image_view), "Could not create full subressource image view, when creating image.");
-    }
+    vc_image_view hndl = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE_VIEW, &view_man);
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE_VIEW, (vc_man_destroy_func)_vc_priv_image_view_destroy);
+    return hndl;
 }
 
-u64    _vc_priv_hash_image_view_ci(VkImageViewCreateInfo *ci, u64 size)
+
+b8                  _vc_priv_image_sampler_destroy(vc_ctx *ctx, vc_priv_man_image_sampler *img)
 {
-    ASSERT(sizeof(VkImageViewCreateInfo) == size);
-
-    u64 hash = (u64)ci->image;
-    hash |= (u64)ci->flags >> 32;
-    hash ^= ci->format * ci->viewType;
-
-    u64 swizzle = ci->components.a |
-                  ci->components.r >> 3 |
-                  ci->components.g >> 6 |
-                  ci->components.b >> 9;
-    swizzle *= 201326611;
-    hash    ^= swizzle;
-
-    // Hash subressource range
-    u64 subres = ci->subresourceRange.aspectMask ^
-                 ci->subresourceRange.layerCount >> 4 ^
-                 ci->subresourceRange.levelCount >> 8 ^
-                 ci->subresourceRange.baseMipLevel >> 12 ^
-                 ci->subresourceRange.baseArrayLayer >> 16;
-    subres *= 100663319;
-    hash   ^= subres;
-
-    // I like making hash functions, i just make sure to take all the 64 bits, multiply by big random primes, and xor everything (i have no idea of what i'm
-    // actually doing)
-
-    return hash;
+    vkDestroySampler(ctx->vk_device, img->sampler, NULL);
+    return TRUE;
 }
 
-void    vc_priv_image_view_acquire(vc_ctx *ctx, view_ci)
-{ }
+vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, vc_image image, sampler_desc desc)
+{
+    VkSamplerCreateInfo sampler_ci =
+    {
+        .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter               = desc.mag_filter,
+        .minFilter               = desc.min_filter,
+        .mipmapMode              = desc.mipmap_mode,
+        .addressModeU            = desc.address_mode_u,
+        .addressModeV            = desc.address_mode_v,
+        .addressModeW            = desc.address_mode_w,
+        .mipLodBias              = desc.mip_lod_bias,
+        .anisotropyEnable        = desc.anisotropy_enable,
+        .maxAnisotropy           = desc.max_anisotropy,
+        .compareEnable           = desc.compare_enable,
+        .compareOp               = desc.compare_op,
+        .minLod                  = desc.min_lod,
+        .maxLod                  = desc.max_lod,
+        .borderColor             = desc.border_color,
+        .unnormalizedCoordinates = desc.unnormalized_coordinates,
+    };
+
+    vc_priv_man_image_sampler man_sampler;
+    VK_CHECKH(vkCreateSampler(ctx->vk_device, &sampler_ci, NULL, &man_sampler.sampler), "Could not create a sampler.");
+
+    vc_image_sampler hndl = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, &man_sampler);
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, (vc_man_destroy_func)_vc_priv_image_view_destroy);
+    return hndl;
+}

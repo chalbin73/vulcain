@@ -10,6 +10,8 @@ b8    vc_handle_mgr_create(vc_handle_mgr *mgr, vc_handle_mgr_counts counts)
         [VC_HANDLE_COMMAND_BUFFER]        = sizeof(vc_priv_man_command_buffer),
         [VC_HANDLE_SEMAPHORE]             = sizeof(vc_priv_man_semaphore),
         [VC_HANDLE_IMAGE]                 = sizeof(vc_priv_man_image),
+        [VC_HANDLE_IMAGE_VIEW] = sizeof(vc_priv_man_image_view),
+        [VC_HANDLE_IMAGE_SAMPLER] = sizeof(vc_priv_man_image_sampler),
         [VC_HANDLE_BUFFER]                = sizeof(vc_priv_man_buffer),
         [VC_HANDLE_DESCRIPTOR_SET_LAYOUT] = sizeof(vc_priv_man_descriptor_set_layout),
         [VC_HANDLE_DESCRIPTOR_SET]        = sizeof(vc_priv_man_descriptor_set),
@@ -207,7 +209,10 @@ const char   *vc_handle_type_to_str(vc_handle_type    type)
         return "VC_HANDLE_RENDER_PASS";
     case VC_HANDLE_FRAMEBUFFER:
         return "VC_HANDLE_FRAMEBUFFER";
-
+    case VC_HANDLE_IMAGE_VIEW:
+        return "VC_HANDLE_IMAGE_VIEW";
+    case VC_HANDLE_IMAGE_SAMPLER:
+        return "VC_HANDLE_IMAGE_SAMPLER";
 
     case VC_HANDLE_TYPE_COUNT:
         break;

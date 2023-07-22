@@ -4,6 +4,7 @@
 
 //TODO: Find a cleaner way to do this
 b8      _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image);
+b8      _vc_priv_image_view_destroy(vc_ctx *ctx, vc_priv_man_image_view *image_view);
 
 void    vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query)
 {
@@ -64,8 +65,10 @@ b8    _vc_priv_delete_swapchain(vc_ctx   *ctx)
     for(int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
         vc_handle_destroy(ctx, ctx->swapchain.swapchain_image_hndls[i]);
+        vc_handle_destroy(ctx, ctx->swapchain.swapchain_image_view_hndls[i]);
     }
     mem_free(ctx->swapchain.swapchain_image_hndls);
+    mem_free(ctx->swapchain.swapchain_image_view_hndls);
 
     ctx->swapchain.vk_swapchain          = VK_NULL_HANDLE;
     ctx->swapchain.swapchain_image_hndls = NULL;
@@ -103,7 +106,8 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
     vkGetSwapchainImagesKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, &ctx->swapchain.swapchain_image_count, NULL);
 
     VkImage *swapchain_images = mem_allocate(sizeof(VkImage) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
-    ctx->swapchain.swapchain_image_hndls = mem_allocate(sizeof(vc_image) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
+    ctx->swapchain.swapchain_image_hndls      = mem_allocate(sizeof(vc_image) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
+    ctx->swapchain.swapchain_image_view_hndls = mem_allocate(sizeof(vc_image_view) * ctx->swapchain.swapchain_image_count, MEMORY_TAG_RENDERER);
 
     vkGetSwapchainImagesKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, &ctx->swapchain.swapchain_image_count, swapchain_images);
 
@@ -111,6 +115,19 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
 
     vc_command_buffer cmd_buf = vc_command_buffer_main_create(ctx, VC_QUEUE_MAIN);
     vc_command_buffer_begin(ctx, cmd_buf);
+
+    image_view_desc views_desc =
+    {
+        .subresource_range.baseArrayLayer = 0,
+        .subresource_range.baseMipLevel   = 0,
+        .subresource_range.levelCount     = 1,
+        .subresource_range.layerCount     = 1,
+        .subresource_range.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+
+        .component_mapping                = VC_COMPONENT_MAPPING_ID,
+
+        .view_type                        = VK_IMAGE_VIEW_TYPE_2D,
+    };
 
     for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
@@ -133,9 +150,10 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
                 .share           = FALSE,
                 .layout          = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             },
-            .full_image_view     = VK_NULL_HANDLE,
         };
         ctx->swapchain.swapchain_image_hndls[i] = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE, &img);
+
+        ctx->swapchain.swapchain_image_view_hndls[i] = vc_image_view_create(ctx, ctx->swapchain.swapchain_image_hndls[i], views_desc);
 
         vc_command_image_pipe_barrier(
             ctx,
@@ -148,7 +166,15 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
             VK_ACCESS_MEMORY_WRITE_BIT,
             VK_ACCESS_MEMORY_WRITE_BIT,
             VC_QUEUE_MAIN,
-            VC_QUEUE_MAIN
+            VC_QUEUE_MAIN,
+            (VkImageSubresourceRange)
+            {
+                .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseArrayLayer = 0,
+                .baseMipLevel   = 0,
+                .levelCount     = 1,
+                .layerCount     = 1,
+            }
             );
     }
     vc_command_buffer_end(ctx, cmd_buf);
@@ -157,10 +183,10 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
     vc_handle_destroy(ctx, cmd_buf);
 
     vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE, (vc_man_destroy_func)_vc_priv_image_destroy); //TODO: Find a cleaner way to do this
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE_VIEW, (vc_man_destroy_func)_vc_priv_image_view_destroy); //TODO: Find a cleaner way to do this
 
     mem_free(swapchain_images);
 
-    vc_swapchain_create_full_image_views(ctx); // NOTE: This might not be a good idea ...
     TRACE("Created swapchain image views.");
     return TRUE;
 }
@@ -297,17 +323,7 @@ b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, swapchain_desc desc, VkEx
     return TRUE;
 }
 
-void    vc_swapchain_create_full_image_views(vc_ctx   *ctx)
-{
-    u32 count = vc_swapchain_image_count(ctx);
-    for(int i = 0; i < count; i++)
-    {
-        vc_image_create_full_image_view(ctx, vc_swapchain_get_image_hndls(ctx)[i]);
-    }
-
-}
-
-b8      vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
+b8    vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
 {
     vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore);
     VkResult result            = vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, sem->semaphore, VK_NULL_HANDLE, image_id);
@@ -357,6 +373,11 @@ b8    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
 vc_image                  *vc_swapchain_get_image_hndls(vc_ctx   *ctx)
 {
     return ctx->swapchain.swapchain_image_hndls;
+}
+
+vc_image_view             *vc_swapchain_get_image_view_hndls(vc_ctx   *ctx)
+{
+    return ctx->swapchain.swapchain_image_view_hndls;
 }
 
 u32                        vc_swapchain_image_count(vc_ctx   *ctx)

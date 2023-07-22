@@ -83,6 +83,7 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
             [VC_HANDLE_SEMAPHORE]             = 32,
             [VC_HANDLE_IMAGE]                 = 64,
             [VC_HANDLE_IMAGE_VIEW]            = 64,
+            [VC_HANDLE_IMAGE_SAMPLER] = 64,
             [VC_HANDLE_BUFFER]                = 64,
             [VC_HANDLE_DESCRIPTOR_SET_LAYOUT] = 64,
             [VC_HANDLE_DESCRIPTOR_SET]        = 128,

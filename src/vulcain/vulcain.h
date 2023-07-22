@@ -138,8 +138,8 @@ typedef enum
  */
 typedef struct
 {
-    u32         attachment_count;
-    vc_image   *attachments;
+    u32              attachment_count;
+    vc_image_view   *attachments;
 } render_attachments_set;
 
 
@@ -429,6 +429,48 @@ typedef struct
 } image_create_desc;
 
 /**
+ * @brief Sampler creation description
+ */
+typedef struct
+{
+    VkFilter                mag_filter;
+    VkFilter                min_filter;
+    VkSamplerMipmapMode     mipmap_mode;
+    VkSamplerAddressMode    address_mode_u;
+    VkSamplerAddressMode    address_mode_v;
+    VkSamplerAddressMode    address_mode_w;
+    float                   mip_lod_bias;
+    VkBool32                anisotropy_enable;
+    float                   max_anisotropy;
+    VkBool32                compare_enable;
+    VkCompareOp             compare_op;
+    float                   min_lod;
+    float                   max_lod;
+    VkBorderColor           border_color;
+    VkBool32                unnormalized_coordinates;
+} sampler_desc;
+
+
+#define VC_COMPONENT_MAPPING_ID                        \
+    (VkComponentMapping){ .a = VK_COMPONENT_SWIZZLE_A, \
+                          .r = VK_COMPONENT_SWIZZLE_R, \
+                          .g = VK_COMPONENT_SWIZZLE_G, \
+                          .b = VK_COMPONENT_SWIZZLE_B }
+
+
+
+/**
+ * @brief Image view creation info
+ */
+typedef struct
+{
+    VkImageViewType            view_type;
+
+    VkImageSubresourceRange    subresource_range;
+    VkComponentMapping         component_mapping;
+} image_view_desc;
+
+/**
  * @brief Parameters for swapchain creation
  *
  */
@@ -460,8 +502,9 @@ typedef struct
  */
 typedef struct
 {
-    vc_image         image;
-    VkImageLayout    layout;
+    vc_image_sampler    sampler;
+    vc_image_view       image_view;
+    VkImageLayout       layout;
 } descriptor_binding_image;
 
 /**
@@ -545,6 +588,7 @@ struct vc_ctx
         swapchain_desc    desc;
 
         vc_image         *swapchain_image_hndls;
+        vc_image_view    *swapchain_image_view_hndls;
     }
     swapchain;
 };
@@ -840,13 +884,6 @@ swapchain_configuration     vc_swapchain_configuration_get(vc_ctx   *ctx);
  * @param desc
  */
 void                        vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc);
-/**
- * @brief Sets up the image views for every swapchain image
- *
- * @param ctx
- * @note This is currently already done during swapchain creation
- */
-void                        vc_swapchain_create_full_image_views(vc_ctx   *ctx);
 
 /**
  * @brief Acquires an image on the swapchains
@@ -874,6 +911,14 @@ b8                          vc_swapchain_present_image(vc_ctx *ctx, vc_swp_img_i
  * @return vc_image* A pointer to an array of images
  */
 vc_image                   *vc_swapchain_get_image_hndls(vc_ctx   *ctx);
+
+/**
+ * @brief Gets a pointer to an array of image view handles to the swapchain image views (can be indexed using @c{vc_swp_img_id})
+ *
+ * @param ctx
+ * @return vc_image* A pointer to an array of image views
+ */
+vc_image_view              *vc_swapchain_get_image_view_hndls(vc_ctx   *ctx);
 
 /**
  * @brief The number of images in teh swapchain
@@ -928,24 +973,29 @@ vc_descriptor_set           vc_descriptor_set_create(vc_ctx *ctx, descriptor_set
  * @param dst_access The accesses made on the image by the next pipeline stages
  * @param src_queue The source queue (can be @c{VC_QUEUE_IGNORED})
  * @param dst_queue The destination queue (can be @c{VC_QUEUE_IGNORED})
+ * @param subresource_range The subresource range on which to apply the memory dependency
  * @note If @c{src_queue} and @c{dst_queue} are @c{VC_QUEUE_IGNORED} no queue ownership transfer is made
  */
-void                        vc_command_image_pipe_barrier(vc_ctx                 *ctx,
-                                                          vc_command_buffer       command_buffer,
-                                                          vc_image                image,
+void                        vc_command_image_pipe_barrier(vc_ctx                    *ctx,
+                                                          vc_command_buffer          command_buffer,
+                                                          vc_image                   image,
 
-                                                          VkImageLayout           src_layout,
-                                                          VkImageLayout           dst_layout,
+                                                          VkImageLayout              src_layout,
+                                                          VkImageLayout              dst_layout,
 
-                                                          VkPipelineStageFlags    from,
-                                                          VkPipelineStageFlags    to,
+                                                          VkPipelineStageFlags       from,
+                                                          VkPipelineStageFlags       to,
 
-                                                          VkAccessFlags           src_access,
-                                                          VkAccessFlags           dst_access,
+                                                          VkAccessFlags              src_access,
+                                                          VkAccessFlags              dst_access,
 
-                                                          vc_queue_type           src_queue,
-                                                          vc_queue_type           dst_queue
+                                                          vc_queue_type              src_queue,
+                                                          vc_queue_type              dst_queue,
+
+                                                          VkImageSubresourceRange    subresource_range
                                                           );
+
+void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
 
 //TODO: Get rid of this function here
 /**
@@ -1010,6 +1060,10 @@ vc_image                    vc_image_allocate(vc_ctx *ctx, image_create_desc des
  * @note The image object handle by @c{vc_image} contains a default image view (setup by this function)
  */
 void                        vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
+
+
+vc_image_sampler            vc_image_sampler_create(vc_ctx *ctx, vc_image image, sampler_desc desc);
+vc_image_view               vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc);
 
 /* ---------------- Graphics ---------------- */
 /* ---------------- Render pass ---------------- */

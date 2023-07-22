@@ -7,3 +7,4 @@ b8      _vc_priv_delete_swapchain(vc_ctx   *ctx);
 void    vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc);
 b8      _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, swapchain_desc desc, VkExtent2D *extent);
 void    vc_swapchain_cleanup(vc_ctx   *ctx);
+VkImageAspectFlags    vc_priv_format_infer_aspect_mask(VkFormat    input);

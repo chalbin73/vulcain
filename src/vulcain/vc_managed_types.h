@@ -44,15 +44,19 @@ typedef struct
 
     b8                   external; // Wether or not the image is managed by an external system (e.g. swapchain)
 
-    VkImageView          full_image_view; // Image view taking the full subressource range
-
     image_create_desc    image_desc;
 } vc_priv_man_image;
 
 typedef struct
 {
-    VkImageView image_view;
+    vc_image       parent_image;
+    VkImageView    image_view;
 } vc_priv_man_image_view;
+
+typedef struct
+{
+    VkSampler    sampler;
+} vc_priv_man_image_sampler;
 
 typedef struct
 {
