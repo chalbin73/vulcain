@@ -15,6 +15,8 @@ vec3 colors[3] = vec3[](
 layout (location = 0) out vec3 color;
 
 layout (location = 0) in vec3 vert_pos;
+layout (location = 1) in vec3 vert_nor;
+layout (location = 2) in vec2 vert_uv;
 
 layout (set = 0, binding = 0) uniform ubo
 {
@@ -35,4 +37,6 @@ void main() {
     new_pos.z -= 0.15f;
     new_pos.x -= 0.1f;
     gl_Position = prj * vec4(new_pos, 1.0);
+
+    color = vec3(vert_nor);
 }

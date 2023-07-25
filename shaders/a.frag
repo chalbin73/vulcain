@@ -2,7 +2,8 @@
 
 layout(location = 0) out vec4 outColor;
 layout (location = 0) in vec3 color;
+layout (binding = 1) uniform sampler2D samp;
 
 void main() {
-    outColor = vec4(0, 0, 0, 1.0);
+    outColor = vec4(texture(samp, color.xy));
 }

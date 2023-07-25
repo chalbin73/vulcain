@@ -849,6 +849,8 @@ void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffe
 void                        vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u32 binding, u64 offset);
 void                        vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u64 offset, VkIndexType index_type);
 
+void                        vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer src, vc_image dst, VkImageLayout dst_layout, u32 region_count, VkBufferImageCopy *regions);
+
 /* ---------------- Synchronisation ---------------- */
 
 /**
@@ -995,7 +997,7 @@ void                        vc_command_image_pipe_barrier(vc_ctx                
                                                           VkImageSubresourceRange    subresource_range
                                                           );
 
-void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
+void                        vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
 
 //TODO: Get rid of this function here
 /**
@@ -1062,9 +1064,9 @@ vc_image                    vc_image_allocate(vc_ctx *ctx, image_create_desc des
 void                        vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
 
 
-vc_image_sampler            vc_image_sampler_create(vc_ctx *ctx, vc_image image, sampler_desc desc);
+vc_image_sampler            vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc);
 vc_image_view               vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc);
-
+void                        vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkImageLayout transitioned_layout, VkImageAspectFlags aspect_dst, vc_queue_type queue);
 /* ---------------- Graphics ---------------- */
 /* ---------------- Render pass ---------------- */
 

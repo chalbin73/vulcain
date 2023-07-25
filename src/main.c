@@ -9,10 +9,19 @@
 #include <mathc.h>
 #include <math.h>
 
+#include <stb_image.h>
+
 GLFWwindow *window;
 
 vc_framebuffer *frambuffers;
 VkExtent2D fb_size;
+
+typedef struct
+{
+    f32    pos[3];
+    f32    nor[3];
+    f32    uv[2];
+} vertex;
 
 vc_image depth_buffer;
 vc_image_view depth_buffer_view;
@@ -216,23 +225,6 @@ int     main(i32 argc, char **argv)
         }
         );
 
-    descriptor_set_desc desc_set_desc =
-    {
-        .binding_count = 1,
-        .bindings      = &(descriptor_binding_desc){
-            .descriptor_type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptor_count = 1,
-            .stage_flags      = VK_SHADER_STAGE_VERTEX_BIT,
-            .buffer_info      = &(descriptor_binding_buffer){
-                .buffer       = prj_buf,
-                .whole_buffer = TRUE,
-            }
-        }
-    };
-    vc_buffer_coherent_staged_write(&ctx, prj_buf, 0, sizeof(projection_matrix), projection_matrix, VC_QUEUE_MAIN);
-
-    vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, desc_set_desc);
-    vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
 
     fastObjMesh *mesh = fast_obj_read("test_res/rat.obj");
 
@@ -248,12 +240,11 @@ int     main(i32 argc, char **argv)
         }
         );
 
-
     vc_buffer vertex_buffer = vc_buffer_allocate(
         &ctx,
         (buffer_alloc_desc)
         {
-            .size                = sizeof(f32) * mesh->position_count,
+            .size                = sizeof(vertex) * mesh->position_count,
             .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             .share               = FALSE,
             .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -261,13 +252,9 @@ int     main(i32 argc, char **argv)
         }
         );
 
-    struct vert
-    {
-        f32    pos[3];
-    };
 
-    struct vert *verts = mem_allocate(mesh->position_count * sizeof(struct vert), MEMORY_TAG_RENDERER);
-    u32 *indices       = mem_allocate(sizeof(u32) * mesh->index_count, MEMORY_TAG_RENDERER);
+    vertex *verts = mem_allocate(mesh->position_count * sizeof(vertex), MEMORY_TAG_RENDERER);
+    u32 *indices  = mem_allocate(sizeof(u32) * mesh->index_count, MEMORY_TAG_RENDERER);
     for(int i = 0; i < mesh->index_count; i++)
     {
         indices[i] = mesh->indices[i].p;
@@ -275,17 +262,131 @@ int     main(i32 argc, char **argv)
         verts[indices[i]].pos[0] = mesh->positions[indices[i] * 3];
         verts[indices[i]].pos[1] = mesh->positions[indices[i] * 3 + 1];
         verts[indices[i]].pos[2] = mesh->positions[indices[i] * 3 + 2];
+
+        verts[indices[i]].nor[0] = mesh->positions[mesh->indices[i].n * 3];
+        verts[indices[i]].nor[1] = mesh->positions[mesh->indices[i].n * 3 + 1];
+        verts[indices[i]].nor[2] = mesh->positions[mesh->indices[i].n * 3 + 2];
+
+        verts[indices[i]].uv[0] = mesh->positions[mesh->indices[i].t * 3];
+        verts[indices[i]].uv[1] = mesh->positions[mesh->indices[i].t * 3 + 1];
     }
 
     u32 index_count = mesh->index_count;
     TRACE("Wrinting indices");
     vc_buffer_coherent_staged_write(&ctx, index_buffer, 0, mesh->index_count * sizeof(u32), indices, VC_QUEUE_MAIN);
     TRACE("Wrinting vertices");
-    vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(struct vert), verts, VC_QUEUE_MAIN);
+    vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(vertex), verts, VC_QUEUE_MAIN);
 
     TRACE("Mesh loaded");
-    //fast_obj_destroy(mesh);
+//fast_obj_destroy(mesh);
 
+    i32 tex_w, tex_h, tex_c = 0;
+    u8 *data                = stbi_load("test_res/rat.png", &tex_w, &tex_h, &tex_c, 4);
+
+    ASSERT(tex_c == 4);
+    INFO("Image is %dx%d c%d", tex_w, tex_h, tex_c);
+
+    vc_image rat_texture = vc_image_allocate(
+        &ctx,
+        (image_create_desc)
+        {
+            .width           = tex_w,
+            .depth           = 1,
+            .height          = tex_h,
+            .share           = FALSE,
+            .image_usage     = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            .layout          = VK_IMAGE_LAYOUT_UNDEFINED,
+            .image_format    = VK_FORMAT_R8G8B8A8_UNORM,
+            .image_dimension = 2,
+            .sample_count    = VK_SAMPLE_COUNT_1_BIT,
+            .mip_levels      = 1,
+            .layer_count     = 1,
+        }
+        );
+
+    vc_buffer tex_stage = vc_buffer_allocate(
+        &ctx,
+        (buffer_alloc_desc)
+        {
+            .size                = sizeof(u8) * tex_w * tex_h * tex_c,
+            .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+            .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        }
+        );
+
+    vc_buffer_coherent_staged_write(&ctx, tex_stage, 0, sizeof(u8) * tex_w * tex_h * tex_c, data, VC_QUEUE_MAIN);
+    vc_image_fill_from_buffer(&ctx, rat_texture, tex_stage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VC_QUEUE_MAIN);
+
+    vc_image_sampler sampler = vc_image_sampler_create(
+        &ctx,
+        (sampler_desc)
+        {
+
+            .mag_filter               = VK_FILTER_NEAREST,
+            .min_filter               = VK_FILTER_NEAREST,
+            .mipmap_mode              = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+            .address_mode_u           = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .address_mode_v           = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .address_mode_w           = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .anisotropy_enable        = VK_FALSE,
+            .unnormalized_coordinates = VK_FALSE,
+        }
+        );
+
+    descriptor_set_desc desc_set_desc =
+    {
+        .binding_count = 2,
+        .bindings      = (descriptor_binding_desc[2])
+        {
+            [0] =
+            {
+                .descriptor_type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptor_count = 1,
+                .stage_flags      = VK_SHADER_STAGE_VERTEX_BIT,
+                .buffer_info      = &(descriptor_binding_buffer)
+                {
+                    .buffer       = prj_buf,
+                    .whole_buffer = TRUE,
+                },
+            },
+
+            [1] = (descriptor_binding_desc)
+            {
+                .descriptor_type  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptor_count = 1,
+                .stage_flags      = VK_SHADER_STAGE_FRAGMENT_BIT,
+                .image_info       = &(descriptor_binding_image)
+                {
+                    .image_view                 = vc_image_view_create(
+                        &ctx,
+                        rat_texture,
+                        (image_view_desc)
+                        {
+                            .view_type         = VK_IMAGE_VIEW_TYPE_2D,
+                            .component_mapping = VC_COMPONENT_MAPPING_ID,
+                            .subresource_range =
+                            {
+                                .baseArrayLayer = 0,
+                                .layerCount     = 1,
+                                .baseMipLevel   = 0,
+                                .levelCount     = 1,
+                                .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                            },
+                        }
+                        ),
+                    .layout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .sampler = sampler,
+                }
+            }
+
+        }
+    };
+
+    vc_buffer_coherent_staged_write(&ctx, prj_buf, 0, sizeof(projection_matrix), projection_matrix, VC_QUEUE_MAIN);
+
+    vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, desc_set_desc);
+    vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
 
     graphics_pipeline_code_desc code;
     code.vertex_code          = fio_read_whole_file("shaders/a.vert.spv", &code.vertex_code_size);
@@ -300,14 +401,31 @@ int     main(i32 argc, char **argv)
             .vertex_input_binding_count = 1,
             .vertex_input_bindings      = &(graphics_pipeline_in_binding)
             {
-                .stride          = sizeof(f32) * 3,
+                .stride          = sizeof(f32) * 8,
                 .input_rate      = VK_VERTEX_INPUT_RATE_VERTEX,
-                .attribute_count = 1,
-                .attributes      = &(graphics_pipeline_in_attrib)
+                .attribute_count = 3,
+                .attributes      = (graphics_pipeline_in_attrib[3])
                 {
-                    .format = VK_FORMAT_R32G32B32_SFLOAT,
-                    .offset = 0,
-                },
+
+                    [0] =
+                    {
+                        .format = VK_FORMAT_R32G32B32_SFLOAT,
+                        .offset = 0,
+                    },
+
+                    [1] =
+                    {
+                        .format = VK_FORMAT_R32G32B32_SFLOAT,
+                        .offset = 3 * sizeof(f32),
+                    },
+
+                    [2] =
+                    {
+                        .format = VK_FORMAT_R32G32_SFLOAT,
+                        .offset = 6 * sizeof(f32),
+
+                    }
+                }
             },
             .set_layout_count       = 1,
             .set_layouts            = &set_layout,

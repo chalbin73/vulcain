@@ -219,3 +219,12 @@ void    vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buff
 
     vkCmdBindIndexBuffer(buf->command_buffer, index_buf->buffer, offset, index_type);
 }
+
+void    vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer src, vc_image dst, VkImageLayout dst_layout, u32 region_count, VkBufferImageCopy *regions)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vc_priv_man_buffer *src_buf     = vc_handle_mgr_ptr(&ctx->handle_manager, src);
+    vc_priv_man_image *dst_img      = vc_handle_mgr_ptr(&ctx->handle_manager, dst);
+
+    vkCmdCopyBufferToImage(buf->command_buffer, src_buf->buffer, dst_img->image, dst_layout, region_count, regions);
+}

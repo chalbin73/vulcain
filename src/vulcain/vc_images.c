@@ -252,7 +252,7 @@ b8                  _vc_priv_image_sampler_destroy(vc_ctx *ctx, vc_priv_man_imag
     return TRUE;
 }
 
-vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, vc_image image, sampler_desc desc)
+vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx,  sampler_desc desc)
 {
     VkSamplerCreateInfo sampler_ci =
     {
@@ -280,4 +280,79 @@ vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, vc_image image, sampler
     vc_image_sampler hndl = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, &man_sampler);
     vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, (vc_man_destroy_func)_vc_priv_image_view_destroy);
     return hndl;
+}
+
+void    vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkImageLayout transitioned_layout, VkImageAspectFlags aspect_dst, vc_queue_type queue)
+{
+    vc_priv_man_image *dst_img = vc_handle_mgr_ptr(&ctx->handle_manager, img);
+    //vc_priv_man_buffer *src_buf = vc_handle_mgr_ptr(&ctx->handle_manager, src);
+
+    vc_command_buffer buf = vc_command_buffer_main_create(ctx, queue);
+    vc_command_buffer_begin(ctx, buf);
+
+    vc_command_image_pipe_barrier(
+        ctx,
+        buf,
+        img,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+        VK_ACCESS_MEMORY_WRITE_BIT,
+        VC_QUEUE_IGNORED,
+        VC_QUEUE_IGNORED,
+        (VkImageSubresourceRange)
+        {
+            .aspectMask     = aspect_dst,
+            .layerCount     = dst_img->image_desc.layer_count,
+            .levelCount     = dst_img->image_desc.mip_levels,
+            .baseMipLevel   = 0,
+            .baseArrayLayer = 0,
+        }
+        );
+
+    VkBufferImageCopy region =
+    {
+        .imageExtent       = (VkExtent3D){ dst_img->image_desc.width, dst_img->image_desc.height, dst_img->image_desc.depth },
+        .imageOffset       = (VkOffset3D){ 0 },
+        .bufferOffset      = 0,
+        .bufferRowLength   = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource  = (VkImageSubresourceLayers)
+        {
+            .mipLevel       = 0,
+            .aspectMask     = aspect_dst,
+            .layerCount     = 1,
+            .baseArrayLayer = 0,
+        }
+    };
+
+    vc_command_copy_buffer_to_image(ctx, buf, src, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    vc_command_image_pipe_barrier(
+        ctx,
+        buf,
+        img,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        transitioned_layout,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_ACCESS_MEMORY_WRITE_BIT,
+        VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+        VC_QUEUE_IGNORED,
+        VC_QUEUE_IGNORED,
+        (VkImageSubresourceRange)
+        {
+            .aspectMask     = aspect_dst,
+            .layerCount     = dst_img->image_desc.layer_count,
+            .levelCount     = dst_img->image_desc.mip_levels,
+            .baseMipLevel   = 0,
+            .baseArrayLayer = 0,
+        }
+        );
+    vc_command_buffer_end(ctx, buf);
+    vc_command_buffer_submit(ctx, buf, VC_NULL_HANDLE, NULL);
+
+    vc_queue_wait_idle(ctx, queue);
 }
