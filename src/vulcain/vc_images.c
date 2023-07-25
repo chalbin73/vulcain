@@ -252,7 +252,7 @@ b8                  _vc_priv_image_sampler_destroy(vc_ctx *ctx, vc_priv_man_imag
     return TRUE;
 }
 
-vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx,  sampler_desc desc)
+vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc)
 {
     VkSamplerCreateInfo sampler_ci =
     {
@@ -278,7 +278,7 @@ vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx,  sampler_desc desc)
     VK_CHECKH(vkCreateSampler(ctx->vk_device, &sampler_ci, NULL, &man_sampler.sampler), "Could not create a sampler.");
 
     vc_image_sampler hndl = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, &man_sampler);
-    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, (vc_man_destroy_func)_vc_priv_image_view_destroy);
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_IMAGE_SAMPLER, (vc_man_destroy_func)_vc_priv_image_sampler_destroy);
     return hndl;
 }
 

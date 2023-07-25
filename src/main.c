@@ -263,12 +263,12 @@ int     main(i32 argc, char **argv)
         verts[indices[i]].pos[1] = mesh->positions[indices[i] * 3 + 1];
         verts[indices[i]].pos[2] = mesh->positions[indices[i] * 3 + 2];
 
-        verts[indices[i]].nor[0] = mesh->positions[mesh->indices[i].n * 3];
-        verts[indices[i]].nor[1] = mesh->positions[mesh->indices[i].n * 3 + 1];
-        verts[indices[i]].nor[2] = mesh->positions[mesh->indices[i].n * 3 + 2];
+        verts[indices[i]].nor[0] = mesh->normals[mesh->indices[i].n * 3];
+        verts[indices[i]].nor[1] = mesh->normals[mesh->indices[i].n * 3 + 1];
+        verts[indices[i]].nor[2] = mesh->normals[mesh->indices[i].n * 3 + 2];
 
-        verts[indices[i]].uv[0] = mesh->positions[mesh->indices[i].t * 3];
-        verts[indices[i]].uv[1] = mesh->positions[mesh->indices[i].t * 3 + 1];
+        verts[indices[i]].uv[0] = mesh->texcoords[mesh->indices[i].t * 2];
+        verts[indices[i]].uv[1] = 1 - mesh->texcoords[mesh->indices[i].t * 2 + 1];
     }
 
     u32 index_count = mesh->index_count;

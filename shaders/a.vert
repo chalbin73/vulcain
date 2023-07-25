@@ -38,5 +38,5 @@ void main() {
     new_pos.x -= 0.1f;
     gl_Position = prj * vec4(new_pos, 1.0);
 
-    color = vec3(vert_nor);
+    color = vec3(vert_uv, 0.0);
 }
