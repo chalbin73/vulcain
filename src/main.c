@@ -108,7 +108,11 @@ int     main(i32 argc, char **argv)
     const char **exts = glfwGetRequiredInstanceExtensions(&exts_count);
 
     f32 projection_matrix[MAT4_SIZE];
+    f32 model_matrix[MAT4_SIZE];
+    f32 view_matrix[MAT4_SIZE];
 
+    mat4_identity(model_matrix);
+    mat4_identity(view_matrix);
     mat4_perspective(projection_matrix, 3.1415f / 2.0f, 16.0f / 9.0f, 0.01f, 1000.0f);
 
     timer t = TIMER_START();
@@ -214,12 +218,12 @@ int     main(i32 argc, char **argv)
         }
         );
 
-    vc_buffer prj_buf = vc_buffer_allocate(
+    vc_buffer mvp_buf = vc_buffer_allocate(
         &ctx,
         (buffer_alloc_desc){
             .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             .allocation_flags    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-            .size                = sizeof(projection_matrix) + sizeof(float),
+            .size                = sizeof(projection_matrix) * 4,
             .required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .share               = FALSE,
         }
@@ -346,7 +350,7 @@ int     main(i32 argc, char **argv)
                 .stage_flags      = VK_SHADER_STAGE_VERTEX_BIT,
                 .buffer_info      = &(descriptor_binding_buffer)
                 {
-                    .buffer       = prj_buf,
+                    .buffer       = mvp_buf,
                     .whole_buffer = TRUE,
                 },
             },
@@ -383,7 +387,7 @@ int     main(i32 argc, char **argv)
         }
     };
 
-    vc_buffer_coherent_staged_write(&ctx, prj_buf, 0, sizeof(projection_matrix), projection_matrix, VC_QUEUE_MAIN);
+    vc_buffer_coherent_staged_write(&ctx, mvp_buf, 0, sizeof(projection_matrix), projection_matrix, VC_QUEUE_MAIN);
 
     vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, desc_set_desc);
     vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
@@ -468,7 +472,10 @@ int     main(i32 argc, char **argv)
 
     b8 recreated = FALSE;
 
-    u64 time = platform_millis();
+    void *matrices = mem_allocate(sizeof(projection_matrix) * 3, MEMORY_TAG_RENDERER);
+    u64 time       = platform_millis();
+    f32 v[VEC3_SIZE];
+
     while ( !glfwWindowShouldClose(window) )
     {
         u64 now = platform_millis();
@@ -477,11 +484,20 @@ int     main(i32 argc, char **argv)
 
         time = now;
         f32 t = (f32)time / 1000.0f;
+        (void)t;
+
+        mat4_identity(model_matrix);
+        mat4_rotation_z(model_matrix, t);
+        mat4_translate( model_matrix, model_matrix, vec3(v, 0, 0, -0.3) );
 
         vc_queue_wait_idle(&ctx, VC_QUEUE_COMPUTE);
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
 
-        vc_buffer_coherent_staged_write(&ctx, prj_buf, sizeof(projection_matrix), sizeof(f32), &t, VC_QUEUE_MAIN);
+        mem_memcpy( matrices, model_matrix, sizeof(model_matrix) );
+        mem_memcpy( (void *)( (u64)matrices + sizeof(model_matrix) ), view_matrix, sizeof(model_matrix) );
+        mem_memcpy( (void *)( (u64)matrices + (sizeof(model_matrix) * 2) ), projection_matrix, sizeof(model_matrix) );
+
+        vc_buffer_coherent_staged_write(&ctx, mvp_buf, 0, sizeof(projection_matrix) * 3, matrices, VC_QUEUE_MAIN);
 
         u32 iid = 0;
         if ( !vc_swapchain_acquire_image(&ctx, &iid, sem) )

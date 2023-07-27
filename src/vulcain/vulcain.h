@@ -17,6 +17,18 @@
  */
 
 /**
+ *
+ * NOTE: A architecture note :
+ * I decided that I will not use the "private struct" pattern :
+ * Even though this lets user access the members of the struct.
+ * If users want to fuck everything up by accesssing members, then so be it
+ * If they want to keep everything working, then they just shouldn't access the members
+ * But I want to be able to access everything in the struct IF THEY WANT.
+ * Also, this gives more control on where to store thoses structs (stack, heap, custom allocator)
+ *
+ */
+
+/**
  * @brief Necessary parameters to create a vulkan instance
  *
  */
@@ -564,7 +576,6 @@ struct vc_ctx
     vc_windowing_system_funcs    windowing_system;
     vc_handle_mgr                handle_manager;
     hashmap                      desc_set_layouts_hashmap;
-    VkDescriptorPool             vk_main_descriptor_pool;  // TODO: Make a swapping pool system.
     VmaAllocator                 vma_allocator;
 
     // Data relative to the queues
