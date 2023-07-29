@@ -67,6 +67,7 @@ typedef struct
 typedef struct
 {
     u64                layout_hash;
+    VkDescriptorPool parent_pool;
     VkDescriptorSet    set;
 } vc_priv_man_descriptor_set;
 

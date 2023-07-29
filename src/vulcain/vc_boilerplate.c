@@ -83,7 +83,7 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
             [VC_HANDLE_SEMAPHORE]             = 32,
             [VC_HANDLE_IMAGE]                 = 64,
             [VC_HANDLE_IMAGE_VIEW]            = 64,
-            [VC_HANDLE_IMAGE_SAMPLER] = 64,
+            [VC_HANDLE_IMAGE_SAMPLER]         = 64,
             [VC_HANDLE_BUFFER]                = 64,
             [VC_HANDLE_DESCRIPTOR_SET_LAYOUT] = 64,
             [VC_HANDLE_DESCRIPTOR_SET]        = 128,
@@ -113,21 +113,10 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
     INFO("Vulcain instance setup.");
 
     INFO("Creating descriptor pool");
-    // Descriptor pool creation
-    {
-        // TODO: Use a dynamic pool swapping system
-        VkDescriptorPoolCreateInfo pool_ci =
-        {
-            .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-            .maxSets       = 64,
-            .poolSizeCount = 1,
-            .pPoolSizes    = (VkDescriptorPoolSize[1]){
-                [0] = { .type= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                .descriptorCount= 64 },
-            }
-        };
 
-        VK_CHECKR(vkCreateDescriptorPool(ctx->vk_device, &pool_ci, NULL, &ctx->vk_main_descriptor_pool), "Could not create main descriptor pool.");
+    // Descriptor set allocator creation
+    {
+        vc_priv_descriptor_set_allocator_create(ctx, &ctx->set_allocator);
     }
 
     // Vma creation
@@ -521,7 +510,7 @@ void    vc_destroy_ctx(vc_ctx   *ctx)
 
     // Descriptor pool destruction
     {
-        vkDestroyDescriptorPool(ctx->vk_device, ctx->vk_main_descriptor_pool, NULL);
+        vc_priv_descriptor_set_allocator_destroy(ctx, &ctx->set_allocator);
     }
 
 

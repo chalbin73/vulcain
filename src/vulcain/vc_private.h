@@ -14,15 +14,39 @@ VkImageAspectFlags    vc_priv_format_infer_aspect_mask(VkFormat    input);
 
 #define VC_PRIV_DESCRIPTOR_POOL_ALLOCATOR_ALLOC_COUNT 100
 
-typedef struct
-{
-    VkDescriptorPool   *used_pools; // darray
-    VkDescriptorPool   *free_pools; // darray
 
-    VkDescriptorPool    current_pool;
-} vc_descriptor_set_allocator;
+/**
+ * @brief Creates a descriptor set allocator
+ *
+ * @param ctx 
+ * @param alloc The new allocator
+ */
+void                  vc_priv_descriptor_set_allocator_create(vc_ctx *ctx, vc_descriptor_set_allocator *alloc);
 
-void    vc_priv_descriptor_set_allocator_create(vc_ctx *ctx, vc_descriptor_set_allocator *alloc);
-b8      vc_priv_descriptor_set_allocator_alloc(vc_ctx *ctx, vc_descriptor_set_allocator *alloc, VkDescriptorSetLayout layout, VkDescriptorSet *set);
-void    vc_priv_descriptor_set_allocator_reset(vc_ctx *ctx, vc_descriptor_set_allocator *alloc);
-void    vc_priv_descriptor_set_allocator_destroy(vc_ctx *ctx, vc_descriptor_set_allocator *alloc);
+/**
+ * @brief Allocates a descriptor set
+ *
+ * @param ctx 
+ * @param alloc 
+ * @param layout The layout with which to create the descriptor set
+ * @param set The newly created set
+ * @param parent_pool A handle to the pool that allocated the set
+ * @return 
+ */
+b8                    vc_priv_descriptor_set_allocator_alloc(vc_ctx *ctx, vc_descriptor_set_allocator *alloc, VkDescriptorSetLayout layout, VkDescriptorSet *set, VkDescriptorPool *parent_pool);
+
+/**
+ * @brief Resets all pools of descriptors
+ *
+ * @param ctx 
+ * @param alloc 
+ */
+void                  vc_priv_descriptor_set_allocator_reset(vc_ctx *ctx, vc_descriptor_set_allocator *alloc);
+
+/**
+ * @brief Destroys a descriptor set allocator, as well as the subsequent vulkan objects
+ *
+ * @param ctx 
+ * @param alloc 
+ */
+void                  vc_priv_descriptor_set_allocator_destroy(vc_ctx *ctx, vc_descriptor_set_allocator *alloc);

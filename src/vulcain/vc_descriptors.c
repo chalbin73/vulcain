@@ -1,4 +1,5 @@
 #include "vc_managed_types.h"
+#include "vc_private.h"
 #include "vulcain.h"
 
 vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc)
@@ -29,29 +30,19 @@ vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descrip
 
 b8                   _vc_priv_descriptor_set_destroy(vc_ctx *ctx, vc_priv_man_descriptor_set *set)
 {
-    vkFreeDescriptorSets(ctx->vk_device, ctx->vk_main_descriptor_pool, 1, &set->set);
+    vkFreeDescriptorSets(ctx->vk_device, set->parent_pool, 1, &set->set);
     return TRUE;
 }
 
 vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc, vc_descriptor_set_layout set_layout)
 {
     vc_priv_man_descriptor_set_layout *man_set_layout = vc_handle_mgr_ptr(&ctx->handle_manager, set_layout);
-
-    VkDescriptorSetAllocateInfo alloc_i =
-    {
-        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool     = ctx->vk_main_descriptor_pool,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &man_set_layout->set_layout,
-    };
-
-    vc_priv_man_descriptor_set set =
+    vc_priv_man_descriptor_set set                    =
     {
         .layout_hash = man_set_layout->hash,
     };
+    vc_priv_descriptor_set_allocator_alloc(ctx, &ctx->set_allocator, man_set_layout->set_layout, &set.set, &set.parent_pool);
 
-    VK_CHECKH(vkAllocateDescriptorSets(ctx->vk_device, &alloc_i, &set.set), "Could not allocate a descriptor set.");
-    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_DESCRIPTOR_SET, (vc_man_destroy_func)_vc_priv_descriptor_set_destroy);
 
     VkWriteDescriptorSet *writes = mem_allocate(sizeof(VkWriteDescriptorSet) * desc_set_desc.binding_count, MEMORY_TAG_RENDERER);
 

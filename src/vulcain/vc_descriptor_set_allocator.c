@@ -50,7 +50,7 @@ VkDescriptorPool    _vc_priv_create_pool(vc_ctx *ctx, u32 set_count, VkDescripto
     VkDescriptorPoolCreateInfo pool_ci =
     {
         .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .flags         = flags,
+        .flags         = flags | VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
         .maxSets       = set_count,
         .poolSizeCount = _VC_PRIV_POOL_SIZE_COUNT,
         .pPoolSizes    = sizes,
@@ -74,7 +74,7 @@ VkDescriptorPool    _vc_priv_grab_pool(vc_ctx *ctx, vc_descriptor_set_allocator 
     return _vc_priv_create_pool(ctx, VC_PRIV_DESCRIPTOR_POOL_ALLOCATOR_ALLOC_COUNT, 0);
 }
 
-b8    vc_priv_descriptor_set_allocator_alloc(vc_ctx *ctx, vc_descriptor_set_allocator *alloc, VkDescriptorSetLayout layout, VkDescriptorSet *set)
+b8    vc_priv_descriptor_set_allocator_alloc(vc_ctx *ctx, vc_descriptor_set_allocator *alloc, VkDescriptorSetLayout layout, VkDescriptorSet *set, VkDescriptorPool *parent_pool)
 {
     if(alloc->current_pool == VK_NULL_HANDLE)
     {
@@ -95,6 +95,8 @@ b8    vc_priv_descriptor_set_allocator_alloc(vc_ctx *ctx, vc_descriptor_set_allo
     switch (res)
     {
     case VK_SUCCESS:
+        if(parent_pool)
+            *parent_pool = alloc_i.descriptorPool;
         return TRUE;
 
     case VK_ERROR_FRAGMENTED_POOL:
@@ -115,6 +117,8 @@ b8    vc_priv_descriptor_set_allocator_alloc(vc_ctx *ctx, vc_descriptor_set_allo
 
     if(res == VK_SUCCESS)
     {
+        if(parent_pool)
+            *parent_pool = alloc_i.descriptorPool;
         return TRUE;
     }
     return FALSE;

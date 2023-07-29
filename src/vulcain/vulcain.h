@@ -544,6 +544,19 @@ typedef struct
 } descriptor_set_desc;
 
 /**
+ * @brief Allocator for descriptor sets (functions are private)
+ * TODO: Consider making this a handled object.
+ *
+ */
+typedef struct
+{
+    VkDescriptorPool   *used_pools; // darray
+    VkDescriptorPool   *free_pools; // darray
+
+    VkDescriptorPool    current_pool;
+} vc_descriptor_set_allocator;
+
+/**
  * @brief Id of a swapchain image (used to know where the id can be used coherently)
  *
  */
@@ -566,17 +579,18 @@ typedef struct
  */
 struct vc_ctx
 {
-    VkInstance                   vk_instance;
-    b8                           debug_enabled;
-    VkDebugUtilsMessengerEXT     vk_debug_messenger;
-    VkSurfaceKHR                 vk_window_surface;
-    VkPhysicalDevice             vk_selected_physical_device;
-    VkDevice                     vk_device;
-    b8                           use_windowing;
-    vc_windowing_system_funcs    windowing_system;
-    vc_handle_mgr                handle_manager;
-    hashmap                      desc_set_layouts_hashmap;
-    VmaAllocator                 vma_allocator;
+    VkInstance                     vk_instance;
+    b8                             debug_enabled;
+    VkDebugUtilsMessengerEXT       vk_debug_messenger;
+    VkSurfaceKHR                   vk_window_surface;
+    VkPhysicalDevice               vk_selected_physical_device;
+    VkDevice                       vk_device;
+    b8                             use_windowing;
+    vc_windowing_system_funcs      windowing_system;
+    vc_handle_mgr                  handle_manager;
+    hashmap                        desc_set_layouts_hashmap;
+    VmaAllocator                   vma_allocator;
+    vc_descriptor_set_allocator    set_allocator;
 
     // Data relative to the queues
     struct queues
