@@ -590,18 +590,18 @@ typedef struct
  */
 struct vc_ctx
 {
-    VkInstance                     vk_instance;
-    b8                             debug_enabled;
-    VkDebugUtilsMessengerEXT       vk_debug_messenger;
-    VkSurfaceKHR                   vk_window_surface;
-    VkPhysicalDevice               vk_selected_physical_device;
-    VkDevice                       vk_device;
-    b8                             use_windowing;
-    vc_windowing_system_funcs      windowing_system;
-    vc_handle_mgr                  handle_manager;
-    VmaAllocator                   vma_allocator;
-    vc_descriptor_set_allocator    set_allocator;
-    vc_descriptor_set_layout_cache set_layout_cache;
+    VkInstance                        vk_instance;
+    b8                                debug_enabled;
+    VkDebugUtilsMessengerEXT          vk_debug_messenger;
+    VkSurfaceKHR                      vk_window_surface;
+    VkPhysicalDevice                  vk_selected_physical_device;
+    VkDevice                          vk_device;
+    b8                                use_windowing;
+    vc_windowing_system_funcs         windowing_system;
+    vc_handle_mgr                     handle_manager;
+    VmaAllocator                      vma_allocator;
+    vc_descriptor_set_allocator       set_allocator;
+    vc_descriptor_set_layout_cache    set_layout_cache;
 
     // Data relative to the queues
     struct queues
@@ -609,7 +609,7 @@ struct vc_ctx
         u32              indices[VC_QUEUE_TYPE_COUNT];
         f32              priorities[VC_QUEUE_TYPE_COUNT];
         VkQueue          queues[VC_QUEUE_TYPE_COUNT];
-        VkCommandPool    pools[VC_QUEUE_TYPE_COUNT];
+        VkCommandPool    pools[VC_QUEUE_TYPE_COUNT]; // TODO: Add support to create custom pools
     }
                                queues;
 
@@ -726,13 +726,14 @@ vc_compute_pipe             vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_des
 /* ---------------- Commands ---------------- */
 
 /**
- * @brief Creates a command buffer
+ * @brief Creates a command buffer in one of the main (default) pools based on the specified queues
  *
  * @param ctx
  * @param queue The queue on which to create the command buffer
+ * @param level The command buffer level
  * @return vc_command_buffer A handle to the command buffer
  */
-vc_command_buffer           vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue);
+vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level);
 
 /**
  * @brief Submits a command buffer
@@ -887,6 +888,10 @@ void                        vc_command_bind_index_buffer(vc_ctx *ctx, vc_command
 
 void                        vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer src, vc_image dst, VkImageLayout dst_layout, u32 region_count, VkBufferImageCopy *regions);
 
+
+void                        vc_command_execute_secondary_buffers(vc_ctx *ctx, vc_command_buffer command_buffer, u32 command_buffer_count, vc_command_buffer *secondary_buffers);
+void                        vc_command_execute_secondary_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_command_buffer secondary_buffer);
+
 /* ---------------- Synchronisation ---------------- */
 
 /**
@@ -1033,7 +1038,7 @@ void                        vc_command_image_pipe_barrier(vc_ctx                
                                                           VkImageSubresourceRange    subresource_range
                                                           );
 
-void                        vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
+void                vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
 
 /* ---------------- Buffers ---------------- */
 
@@ -1044,7 +1049,7 @@ void                        vc_image_transition_layout(vc_ctx *ctx, vc_image ima
  * @param alloc_desc The allocation parameters
  * @return vc_buffer A handle to the buffer
  */
-vc_buffer                   vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc);
+vc_buffer           vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc);
 
 /**
  * @brief Makes a coherent write from CPU to buffer, this write is blocking on the CPU, which makes it not suitable for performant operations.
@@ -1056,7 +1061,7 @@ vc_buffer                   vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc al
  * @param data The data to write
  * @param copy_queue The queue on which to send the copy command, and on which to wait
  */
-void                        vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data, vc_queue_type copy_queue);
+void                vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data, vc_queue_type copy_queue);
 
 /**
  * @brief Simple copy into HOST_VISIBLE buffer, handles mapping, offseting, memcpy-ing, and unmapping the buffer, convinience function
@@ -1067,7 +1072,7 @@ void                        vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buff
  * @param length The length of the write
  * @param data The data to write
  */
-void                        vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data);
+void                vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 offset, u64 length, void *data);
 
 /* ---------------- Images ---------------- */
 
@@ -1078,7 +1083,7 @@ void                        vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 
  * @param desc Descripion of the image
  * @return vc_image A handle to the imaage
  */
-vc_image                    vc_image_allocate(vc_ctx *ctx, image_create_desc desc);
+vc_image            vc_image_allocate(vc_ctx *ctx, image_create_desc desc);
 
 /**
  * @brief Creates the full image view for an image, that is, the image view viewing the full subRessources of the image (the one most commonly used)
@@ -1087,12 +1092,12 @@ vc_image                    vc_image_allocate(vc_ctx *ctx, image_create_desc des
  * @param img The image on which to setup the full image view
  * @note The image object handle by @c{vc_image} contains a default image view (setup by this function)
  */
-void                        vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
+void                vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
 
 
-vc_image_sampler            vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc);
-vc_image_view               vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc);
-void                        vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkImageLayout transitioned_layout, VkImageAspectFlags aspect_dst, vc_queue_type queue);
+vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc);
+vc_image_view       vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc);
+void                vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkImageLayout transitioned_layout, VkImageAspectFlags aspect_dst, vc_queue_type queue);
 /* ---------------- Graphics ---------------- */
 /* ---------------- Render pass ---------------- */
 
@@ -1103,7 +1108,7 @@ void                        vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img,
  * @param desc
  * @return vc_render_pass
  */
-vc_render_pass              vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
+vc_render_pass      vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
 
 /* ---------------- Framebuffer ---------------- */
 
@@ -1114,7 +1119,7 @@ vc_render_pass              vc_render_pass_create(vc_ctx *ctx, render_pass_desc 
  * @param desc
  * @return vc_framebuffer
  */
-vc_framebuffer              vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc);
+vc_framebuffer      vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc);
 
 /* ---------------- Graphics Pipeline ---------------- */
 
@@ -1125,7 +1130,7 @@ vc_framebuffer              vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc 
  * @param desc
  * @return vc_graphics_pipe
  */
-vc_graphics_pipe            vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc desc);
+vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc desc);
 
 /* ---------------- Utils ---------------- */
 
@@ -1137,7 +1142,7 @@ vc_graphics_pipe            vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeli
  * @param flags The flags
  * @param[out] ids A pointer to a allocated emptly list of u32s
  */
-void                        vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_flags flags, u32 *ids);
+void                vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_flags flags, u32 *ids);
 
 /**
  * @brief Returns the number of set bits in a flag
@@ -1145,4 +1150,4 @@ void                        vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc
  * @param flag The flag
  * @returns u32 The number of set bits in flag
  */
-u32                         vc_u32_flags_set_bits(u32    flag);
+u32                 vc_u32_flags_set_bits(u32    flag);

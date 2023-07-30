@@ -113,7 +113,7 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
 
     TRACE("Retrieved swapchain images.");
 
-    vc_command_buffer cmd_buf = vc_command_buffer_main_create(ctx, VC_QUEUE_MAIN);
+    vc_command_buffer cmd_buf = vc_command_buffer_main_create(ctx, VC_QUEUE_MAIN, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     vc_command_buffer_begin(ctx, cmd_buf);
 
     image_view_desc views_desc =

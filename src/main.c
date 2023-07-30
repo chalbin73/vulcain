@@ -127,7 +127,7 @@ int     main(i32 argc, char **argv)
             .app_name         = "Playground",
             .engine_name      = "Playground",
             .engine_version   = VK_MAKE_VERSION(0, 0, 0),
-            .enable_debugging = TRUE,
+            .enable_debugging = FALSE,
             .extension_count  = exts_count,
             .extensions       = (char **)exts,
             .enable_windowing = TRUE,
@@ -466,18 +466,19 @@ int     main(i32 argc, char **argv)
         );
     (void)graphics_pipe;
 
-    vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_MAIN);
+    vc_command_buffer buf = vc_command_buffer_main_create(&ctx, VC_QUEUE_MAIN, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     TIMER_LOG(t, "Vulkan init");
 
     b8 recreated = FALSE;
 
     void *matrices = mem_allocate(sizeof(projection_matrix) * 3, MEMORY_TAG_RENDERER);
-    u64 time       = platform_millis();
+    //u64 time       = platform_millis();
     f32 v[VEC3_SIZE];
 
     while ( !glfwWindowShouldClose(window) )
     {
+        /*
         u64 now = platform_millis();
         if ( (now - time) < 16 )
             continue;
@@ -485,7 +486,7 @@ int     main(i32 argc, char **argv)
         time = now;
         f32 t = (f32)time / 1000.0f;
         (void)t;
-
+        */
         mat4_identity(model_matrix);
         mat4_rotation_z(model_matrix, t);
         mat4_translate( model_matrix, model_matrix, vec3(v, 0, 0, -0.3) );

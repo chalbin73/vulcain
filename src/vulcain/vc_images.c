@@ -89,7 +89,7 @@ void    vc_command_simple_image_copy(vc_ctx              *ctx,
 // TODO: Make a image transtion routine, that takes an array of images
 void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect)
 {
-    vc_command_buffer buf  = vc_command_buffer_main_create(ctx, queue);
+    vc_command_buffer buf  = vc_command_buffer_main_create(ctx, queue, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     vc_priv_man_image *img = vc_handle_mgr_ptr(&ctx->handle_manager, image);
     vc_command_buffer_begin(ctx, buf);
 
@@ -287,7 +287,7 @@ void    vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkIm
     vc_priv_man_image *dst_img = vc_handle_mgr_ptr(&ctx->handle_manager, img);
     //vc_priv_man_buffer *src_buf = vc_handle_mgr_ptr(&ctx->handle_manager, src);
 
-    vc_command_buffer buf = vc_command_buffer_main_create(ctx, queue);
+    vc_command_buffer buf = vc_command_buffer_main_create(ctx, queue, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     vc_command_buffer_begin(ctx, buf);
 
     vc_command_image_pipe_barrier(

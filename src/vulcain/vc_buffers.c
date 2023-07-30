@@ -98,7 +98,7 @@ void    vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset,
 
         vc_buffer_coherent_staged_write(ctx, staging_buffer, 0, length, data, copy_queue);
 
-        vc_command_buffer command_buffer = vc_command_buffer_main_create(ctx, copy_queue);
+        vc_command_buffer command_buffer = vc_command_buffer_main_create(ctx, copy_queue, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         vc_command_buffer_begin(ctx, command_buffer);
 
         VkBufferCopy copy =

@@ -9,13 +9,13 @@ b8                   _vc_priv_command_buffer_destroy(vc_ctx *ctx, vc_priv_man_co
     return TRUE;
 }
 
-vc_command_buffer    vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue)
+vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level)
 {
     VkCommandBufferAllocateInfo alloc_ci =
     {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandBufferCount = 1,
-        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .level              = level,
         .commandPool        = ctx->queues.pools[queue],
     };
 
@@ -227,4 +227,25 @@ void    vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_b
     vc_priv_man_image *dst_img      = vc_handle_mgr_ptr(&ctx->handle_manager, dst);
 
     vkCmdCopyBufferToImage(buf->command_buffer, src_buf->buffer, dst_img->image, dst_layout, region_count, regions);
+}
+
+void    vc_command_execute_secondary_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_command_buffer secondary_buffer)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    vc_priv_man_command_buffer *sec = vc_handle_mgr_ptr(&ctx->handle_manager, secondary_buffer);
+    vkCmdExecuteCommands(buf->command_buffer, 1, &sec->command_buffer);
+}
+
+void    vc_command_execute_secondary_buffers(vc_ctx *ctx, vc_command_buffer command_buffer, u32 command_buffer_count, vc_command_buffer *secondary_buffers)
+{
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    VkCommandBuffer *secs           = alloca(sizeof(VkCommandBuffer) * command_buffer_count);
+
+    for(int i = 0; i < command_buffer_count; i++)
+    {
+        vc_priv_man_command_buffer *sec = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+        secs[i] = sec->command_buffer;
+    }
+
+    vkCmdExecuteCommands(buf->command_buffer, command_buffer_count, secs);
 }
