@@ -3,7 +3,6 @@
 #include "vc_managed_types.h"
 #include "vulcain.h"
 #include <vulkan/vulkan_core.h>
-
 #include "vc_private.h"
 
 //TODO: Cut this file into smaller parts
@@ -71,7 +70,7 @@ u64    _vc_priv_u64_hash_id(void *obj, u64 size)
 
 b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
-    hashmap_create(&ctx->desc_set_layouts_hashmap, 17, sizeof(u64), sizeof(vc_descriptor_set_layout), _vc_priv_u64_hash_id);
+    vc_priv_descriptor_set_layout_cache_create(&ctx->set_layout_cache);
 
     // TODO: Make this configurable, or allow handle pools to be resizable (need to modify the base layer for that)
     vc_handle_mgr_create(
@@ -504,7 +503,7 @@ void    vc_destroy_ctx(vc_ctx   *ctx)
     vc_swapchain_cleanup(ctx);
 
     vc_handle_mgr_destroy(&ctx->handle_manager, ctx);
-    hashmap_destroy(&ctx->desc_set_layouts_hashmap);
+    vc_priv_descriptor_set_layout_cache_destroy(ctx, &ctx->set_layout_cache);
 
     vmaDestroyAllocator(ctx->vma_allocator);
 

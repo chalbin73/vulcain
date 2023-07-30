@@ -556,6 +556,17 @@ typedef struct
     VkDescriptorPool    current_pool;
 } vc_descriptor_set_allocator;
 
+/*
+ * @brief Caches descriptor set layouts, reuses them, implemented in vc_descriptor_set_layout_cache.c
+ *
+ */
+typedef struct
+{
+    /* @brief maps descriptor set layout info to descriptor layouts */
+    hashmap                  set_layout_map;
+    VkDescriptorSetLayout   *layouts; // darray
+} vc_descriptor_set_layout_cache;
+
 /**
  * @brief Id of a swapchain image (used to know where the id can be used coherently)
  *
@@ -588,9 +599,9 @@ struct vc_ctx
     b8                             use_windowing;
     vc_windowing_system_funcs      windowing_system;
     vc_handle_mgr                  handle_manager;
-    hashmap                        desc_set_layouts_hashmap;
     VmaAllocator                   vma_allocator;
     vc_descriptor_set_allocator    set_allocator;
+    vc_descriptor_set_layout_cache set_layout_cache;
 
     // Data relative to the queues
     struct queues
@@ -1023,16 +1034,6 @@ void                        vc_command_image_pipe_barrier(vc_ctx                
                                                           );
 
 void                        vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
-
-//TODO: Get rid of this function here
-/**
- * @brief <PRIVATE FUNC> Creates, or reuses a descriptor set layout based on the info
- *
- * @param ctx
- * @param ci The create info
- * @return vc_descriptor_set_layout Handle to set layout
- */
-vc_descriptor_set_layout    vc_priv_desc_set_layout_get(vc_ctx *ctx, VkDescriptorSetLayoutCreateInfo *ci);
 
 /* ---------------- Buffers ---------------- */
 

@@ -2,6 +2,12 @@
 #include "vc_private.h"
 #include "vulcain.h"
 
+b8                          _vc_priv_descriptor_set_layout_destroy(vc_ctx *ctx, vc_priv_man_descriptor_set_layout *layout)
+{
+    // NOOP Because descriptor set layouts are managed by the cache
+    return TRUE;
+}
+
 vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc)
 {
     VkDescriptorSetLayoutBinding *bindings = mem_allocate(sizeof(VkDescriptorSetLayoutBinding) * desc_set_desc.binding_count, MEMORY_TAG_RENDERER);
@@ -23,9 +29,17 @@ vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descrip
         .pBindings    = bindings,
     };
 
-    vc_descriptor_set_layout set_layout = vc_priv_desc_set_layout_get(ctx, &dsl_ci);
+    VkDescriptorSetLayout layout                 = vc_priv_descriptor_set_layout_cache_grab(ctx, &ctx->set_layout_cache, dsl_ci);
+    vc_priv_man_descriptor_set_layout man_layout =
+    {
+        .set_layout = layout,
+    };
+
+    vc_descriptor_set_layout hndl = vc_handle_mgr_write_alloc(&ctx->handle_manager, VC_HANDLE_DESCRIPTOR_SET_LAYOUT, &man_layout);
+    vc_handle_mgr_set_destroy_func(&ctx->handle_manager, VC_HANDLE_DESCRIPTOR_SET_LAYOUT, (vc_man_destroy_func)_vc_priv_descriptor_set_layout_destroy);
+
     mem_free(bindings);
-    return set_layout;
+    return hndl;
 }
 
 b8                   _vc_priv_descriptor_set_destroy(vc_ctx *ctx, vc_priv_man_descriptor_set *set)
@@ -43,7 +57,7 @@ vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc d
     };
     vc_priv_descriptor_set_allocator_alloc(ctx, &ctx->set_allocator, man_set_layout->set_layout, &set.set, &set.parent_pool);
 
-
+    // Update descriptors
     VkWriteDescriptorSet *writes = mem_allocate(sizeof(VkWriteDescriptorSet) * desc_set_desc.binding_count, MEMORY_TAG_RENDERER);
 
     for (int i = 0; i < desc_set_desc.binding_count; i++)
