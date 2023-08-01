@@ -1,4 +1,9 @@
 .cache/
 bin/
+lib/
 build/
 compile_commands.json
+*.a
+*.log
+*.o
+*.spv

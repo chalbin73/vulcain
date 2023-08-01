@@ -1,9 +1,8 @@
-#include "vulcain/vc_handles.h"
 #include <vulkan/vulkan_core.h>
 #define VC_ENABLE_WINDOWING_GLFW 1
 
 #include "base/base.h"
-#include "vulcain/vulcain.h"
+#include <vulcain.h>
 #include <GLFW/glfw3.h>
 #include <fast_obj.h>
 #include <mathc.h>
@@ -230,7 +229,7 @@ int     main(i32 argc, char **argv)
         );
 
 
-    fastObjMesh *mesh = fast_obj_read("test_res/rat.obj");
+    fastObjMesh *mesh = fast_obj_read("playground/test_res/rat.obj");
 
     vc_buffer index_buffer = vc_buffer_allocate(
         &ctx,
@@ -280,12 +279,13 @@ int     main(i32 argc, char **argv)
     vc_buffer_coherent_staged_write(&ctx, index_buffer, 0, mesh->index_count * sizeof(u32), indices, VC_QUEUE_MAIN);
     TRACE("Wrinting vertices");
     vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(vertex), verts, VC_QUEUE_MAIN);
+    
 
     TRACE("Mesh loaded");
 //fast_obj_destroy(mesh);
 
     i32 tex_w, tex_h, tex_c = 0;
-    u8 *data                = stbi_load("test_res/rat.png", &tex_w, &tex_h, &tex_c, 4);
+    u8 *data                = stbi_load("playground/test_res/rat.png", &tex_w, &tex_h, &tex_c, 4);
 
     ASSERT(tex_c == 4);
     INFO("Image is %dx%d c%d", tex_w, tex_h, tex_c);
@@ -393,9 +393,9 @@ int     main(i32 argc, char **argv)
     vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
 
     graphics_pipeline_code_desc code;
-    code.vertex_code          = fio_read_whole_file("shaders/a.vert.spv", &code.vertex_code_size);
+    code.vertex_code          = fio_read_whole_file("playground/shaders/a.vert.spv", &code.vertex_code_size);
     code.vertex_entry_point   = "main";
-    code.fragment_code        = fio_read_whole_file("shaders/a.frag.spv", &code.fragment_code_size);
+    code.fragment_code        = fio_read_whole_file("playground/shaders/a.frag.spv", &code.fragment_code_size);
     code.fragment_entry_point = "main";
 
     vc_graphics_pipe graphics_pipe = vc_graphics_pipe_create(
@@ -479,14 +479,14 @@ int     main(i32 argc, char **argv)
     while ( !glfwWindowShouldClose(window) )
     {
         /*
-        u64 now = platform_millis();
-        if ( (now - time) < 16 )
+           u64 now = platform_millis();
+           if ( (now - time) < 16 )
             continue;
 
-        time = now;
-        f32 t = (f32)time / 1000.0f;
-        (void)t;
-        */
+           time = now;
+           f32 t = (f32)time / 1000.0f;
+           (void)t;
+         */
         mat4_identity(model_matrix);
         mat4_rotation_z(model_matrix, t);
         mat4_translate( model_matrix, model_matrix, vec3(v, 0, 0, -0.3) );

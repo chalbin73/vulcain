@@ -78,3 +78,4 @@ void    logging_msg(u32 level, u32 line, char *filename, char *message, ...);
         timer time = TIMER_END(t);                                                    \
         INFO( " [TIMER] '" n "' : %.1f s - (%lu ms)", (f32)time / (f32)1.0e3, time ); \
     }
+

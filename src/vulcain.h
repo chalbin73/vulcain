@@ -1,13 +1,13 @@
 #pragma once
 
-#include "../base/base.h"
-#include "../base/data_structures/darray.h"
+#include "base/base.h"
+#include "base/data_structures/darray.h"
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 #include "windowing_systems/vc_windowing_systems.h"
 #include "vc_handles.h"
-#include "../base/data_structures/hashmap.h"
+#include "base/data_structures/hashmap.h"
 #include <vk_mem_alloc.h>
 
 /**
