@@ -5,6 +5,9 @@
 #include <vulkan/vulkan_core.h>
 #include "vc_private.h"
 
+// Static asserts
+STATIC_ASSERT(sizeof(vc_vma_allocator) == sizeof(VmaAllocator), "VmaAllocator size mismatch.");
+
 //TODO: Cut this file into smaller parts
 
 static const char * const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
@@ -137,7 +140,7 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
         allocator_ci.instance         = ctx->vk_instance;
         allocator_ci.pVulkanFunctions = &vma_vulkan_func;
 
-        VK_CHECKR(vmaCreateAllocator(&allocator_ci, &ctx->vma_allocator), "Could not create a VMA Allocator.");
+        VK_CHECKR(vmaCreateAllocator(&allocator_ci, (VmaAllocator *)&ctx->vma_allocator), "Could not create a VMA Allocator.");
     }
 
     return TRUE;

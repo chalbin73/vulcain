@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/base.h"
+#include <base/base.h>
 #include "base/data_structures/darray.h"
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
@@ -8,7 +8,7 @@
 #include "windowing_systems/vc_windowing_systems.h"
 #include "vc_handles.h"
 #include "base/data_structures/hashmap.h"
-#include <vk_mem_alloc.h>
+#include "tp/vk_mem_alloc.h"
 
 /**
  * @brief Main header for vulcain, a "simple", vulkan, wrapper layer
@@ -58,6 +58,21 @@ typedef struct
     VkPhysicalDeviceFeatures    requested_features;
 } physical_device_query;
 
+
+typedef struct
+{
+    u32         format_count;
+    VkFormat   *formats;
+} format_set;
+
+typedef struct
+{
+    format_set              candidates;
+
+    VkFormatFeatureFlags    required_linear_tiling_features;
+    VkFormatFeatureFlags    required_optimal_tiling_features;
+    VkFormatFeatureFlags    required_buffer_features;
+} format_query;
 
 /**
  * @brief Characterisitcs of a newly created swapchain used in the callback
@@ -583,6 +598,7 @@ typedef struct
     VkSurfaceCapabilitiesKHR    capabilities;
 } swapchain_configuration;
 
+
 // No typedef because of forward decl
 /**
  * @brief The context for all vulcain operations
@@ -599,7 +615,7 @@ struct vc_ctx
     b8                                use_windowing;
     vc_windowing_system_funcs         windowing_system;
     vc_handle_mgr                     handle_manager;
-    VmaAllocator                      vma_allocator;
+    VmaAllocator vma_allocator;
     vc_descriptor_set_allocator       set_allocator;
     vc_descriptor_set_layout_cache    set_layout_cache;
 
@@ -733,7 +749,7 @@ vc_compute_pipe             vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_des
  * @param level The command buffer level
  * @return vc_command_buffer A handle to the command buffer
  */
-vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level);
+vc_command_buffer           vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level);
 
 /**
  * @brief Submits a command buffer
@@ -1151,3 +1167,5 @@ void                vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_f
  * @returns u32 The number of set bits in flag
  */
 u32                 vc_u32_flags_set_bits(u32    flag);
+
+VkFormat            vc_format_query(vc_ctx *ctx, format_query query);
