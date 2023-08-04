@@ -1,12 +1,13 @@
-#include "base/data_structures/hashmap.h"
 #include "vc_handles.h"
 #include "vc_managed_types.h"
 #include "vulcain.h"
 #include <vulkan/vulkan_core.h>
+#include <string.h>
 #include "vc_private.h"
 
 // Static asserts
-STATIC_ASSERT(sizeof(vc_vma_allocator) == sizeof(VmaAllocator), "VmaAllocator size mismatch.");
+#define BASE_IMPLEMENTATION
+#include "base.h"
 
 //TODO: Cut this file into smaller parts
 
@@ -73,6 +74,10 @@ u64    _vc_priv_u64_hash_id(void *obj, u64 size)
 
 b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
 {
+    *ctx = (vc_ctx)
+    {
+        0
+    };
     vc_priv_descriptor_set_layout_cache_create(&ctx->set_layout_cache);
 
     // TODO: Make this configurable, or allow handle pools to be resizable (need to modify the base layer for that)
@@ -142,6 +147,8 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
 
         VK_CHECKR(vmaCreateAllocator(&allocator_ci, (VmaAllocator *)&ctx->vma_allocator), "Could not create a VMA Allocator.");
     }
+
+    ctx->swapchain.setup = FALSE;
 
     return TRUE;
 }
@@ -308,7 +315,8 @@ b8    _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
             .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_MAIN, ctx->vk_selected_physical_device, ctx->vk_window_surface),
         };
 
-        ctx->queues.indices[VC_QUEUE_MAIN] = queue_ci.queueFamilyIndex;
+        ctx->queues.indices[VC_QUEUE_MAIN]    = queue_ci.queueFamilyIndex;
+        ctx->queues.priorities[VC_QUEUE_MAIN] = 0.0;
 
         darray_push(queues_ci, queue_ci);
         darray_push(device_extensions, (char *)VC_EXT_VK_KHR_SWAPCHAIN_name);
@@ -323,7 +331,8 @@ b8    _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
             .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_COMPUTE, ctx->vk_selected_physical_device, ctx->vk_window_surface),
         };
 
-        ctx->queues.indices[VC_QUEUE_COMPUTE] = queue_ci.queueFamilyIndex;
+        ctx->queues.indices[VC_QUEUE_COMPUTE]    = queue_ci.queueFamilyIndex;
+        ctx->queues.priorities[VC_QUEUE_COMPUTE] = 0.0;
 
         darray_push(queues_ci, queue_ci);
     }
@@ -337,7 +346,8 @@ b8    _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
             .queueFamilyIndex = _vc_priv_search_physical_device_queue(ctx, VC_QUEUE_TRANSFER, ctx->vk_selected_physical_device, ctx->vk_window_surface),
         };
 
-        ctx->queues.indices[VC_QUEUE_TRANSFER] = queue_ci.queueFamilyIndex;
+        ctx->queues.indices[VC_QUEUE_TRANSFER]    = queue_ci.queueFamilyIndex;
+        ctx->queues.priorities[VC_QUEUE_TRANSFER] = 0.0;
 
         darray_push(queues_ci, queue_ci);
     }
@@ -356,6 +366,9 @@ b8    _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
 
     darray_destroy(queues_ci);
     darray_destroy(device_extensions);
+
+    // Zero initializing is necessary, so that the destroy calls on uninitialized handles are not erroring
+    mem_memset(ctx->queues.pools, 0, sizeof(VkCommandPool) * VC_QUEUE_TYPE_COUNT);
 
     if (query.request_main_queue)
     {
@@ -518,15 +531,15 @@ void    vc_destroy_ctx(vc_ctx   *ctx)
 
     if (ctx->vk_device)
     {
-        if (ctx->queues.pools[VC_QUEUE_MAIN])
+        if (ctx->queues.pools[VC_QUEUE_MAIN] != VK_NULL_HANDLE)
         {
             vkDestroyCommandPool(ctx->vk_device, ctx->queues.pools[VC_QUEUE_MAIN], NULL);
         }
-        if (ctx->queues.pools[VC_QUEUE_COMPUTE])
+        if (ctx->queues.pools[VC_QUEUE_COMPUTE] != VK_NULL_HANDLE)
         {
             vkDestroyCommandPool(ctx->vk_device, ctx->queues.pools[VC_QUEUE_COMPUTE], NULL);
         }
-        if (ctx->queues.pools[VC_QUEUE_TRANSFER])
+        if (ctx->queues.pools[VC_QUEUE_TRANSFER] != VK_NULL_HANDLE)
         {
             vkDestroyCommandPool(ctx->vk_device, ctx->queues.pools[VC_QUEUE_TRANSFER], NULL);
         }
@@ -569,3 +582,4 @@ inline u32    vc_u32_flags_set_bits(u32    flag)
 void    vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_flags flags, u32 *ids)
 {
     /*TODO: Find out why I needed this*/ }
+

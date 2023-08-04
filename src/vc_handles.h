@@ -1,8 +1,5 @@
 #pragma once
-
-#include "base/allocators/handle_allocator.h"
-#include "base/base.h"
-#include "base/data_structures/darray.h"
+#include "base.h"
 
 /**
  * @brief Handle system used to manage all the objects created via vulcain, as well as their destruction

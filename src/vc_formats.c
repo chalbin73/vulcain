@@ -5,12 +5,12 @@
 
 #include "vulcain.h"
 
-VkFormat    vc_format_query(vc_ctx *ctx, format_query query)
+b8    vc_format_query_index(vc_ctx *ctx, format_query query, format_set candidates, u32 *index)
 {
-    for(int i = 0; i < query.candidates.format_count; i++)
+    for(int i = 0; i < candidates.format_count; i++)
     {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(ctx->vk_selected_physical_device, query.candidates.formats[i], &props);
+        vkGetPhysicalDeviceFormatProperties(ctx->vk_selected_physical_device, candidates.formats[i], &props);
 
         b8 valid = TRUE;
 
@@ -20,8 +20,20 @@ VkFormat    vc_format_query(vc_ctx *ctx, format_query query)
 
         if(valid)
         {
-            return query.candidates.formats[i];
+            *index = i;
+            return TRUE;
         }
     }
-    return 0;
+    return FALSE;
 }
+
+VkFormat    vc_format_query(vc_ctx *ctx, format_query query, format_set candidates)
+{
+    u32 index = 0;
+    if( vc_format_query_index(ctx, query, candidates, &index) )
+    {
+        return candidates.formats[index];
+    }
+    return FALSE;
+}
+

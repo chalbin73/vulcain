@@ -1,13 +1,11 @@
 #pragma once
 
-#include <base/base.h>
-#include "base/data_structures/darray.h"
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 #include "windowing_systems/vc_windowing_systems.h"
+#include "base.h"
 #include "vc_handles.h"
-#include "base/data_structures/hashmap.h"
 #include "tp/vk_mem_alloc.h"
 
 /**
@@ -67,8 +65,6 @@ typedef struct
 
 typedef struct
 {
-    format_set              candidates;
-
     VkFormatFeatureFlags    required_linear_tiling_features;
     VkFormatFeatureFlags    required_optimal_tiling_features;
     VkFormatFeatureFlags    required_buffer_features;
@@ -101,7 +97,8 @@ typedef void (*swapchain_destroyed_callback_func)(vc_ctx *ctx, void *user_data);
  */
 typedef struct
 {
-    // Reserved
+    // The query that formats must support in order to be selected
+    format_query    query;
 } swapchain_configuration_query;
 
 /**
@@ -132,8 +129,8 @@ typedef enum
     VC_QUEUE_MAIN = 0,     // Main queue, supporting graphics, present and compute, main work queue
     VC_QUEUE_COMPUTE,     // Async compute, for compute work that can be async to main work
     VC_QUEUE_TRANSFER,     // DMA transfer queues usually
+    VC_QUEUE_TYPE_COUNT,   // Counts actual number of queue types, QUEUE_IGNORED is a special case
     VC_QUEUE_IGNORED,     // For barrier
-    VC_QUEUE_TYPE_COUNT
 } vc_queue_type;
 
 /**
@@ -615,7 +612,7 @@ struct vc_ctx
     b8                                use_windowing;
     vc_windowing_system_funcs         windowing_system;
     vc_handle_mgr                     handle_manager;
-    VmaAllocator vma_allocator;
+    VmaAllocator                      vma_allocator;
     vc_descriptor_set_allocator       set_allocator;
     vc_descriptor_set_layout_cache    set_layout_cache;
 
@@ -635,6 +632,7 @@ struct vc_ctx
     // Contains objects tied to the swapchain
     struct swapchain
     {
+        b8                setup;
         VkSwapchainKHR    vk_swapchain;
         u32               swapchain_image_count;
         swapchain_desc    desc;
@@ -1168,4 +1166,7 @@ void                vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_f
  */
 u32                 vc_u32_flags_set_bits(u32    flag);
 
-VkFormat            vc_format_query(vc_ctx *ctx, format_query query);
+b8                  vc_format_query_index(vc_ctx *ctx, format_query query, format_set candidates, u32 *index);
+
+VkFormat            vc_format_query(vc_ctx *ctx, format_query query, format_set candidates);
+

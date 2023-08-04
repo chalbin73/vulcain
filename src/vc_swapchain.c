@@ -1,5 +1,6 @@
 #include "vulcain.h"
 #include "vc_managed_types.h"
+#include "base.h"
 #include "vc_private.h"
 
 //TODO: Find a cleaner way to do this
@@ -42,14 +43,17 @@ void    vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc)
             );
     }
     vc_handle_mgr_set_current_marker(&ctx->handle_manager, VC_HANDLE_MARKER_DEFAULT);
+    ctx->swapchain.setup = TRUE;
 }
 
 b8    _vc_priv_delete_swapchain(vc_ctx   *ctx)
 {
-    if(ctx->swapchain.vk_swapchain == VK_NULL_HANDLE)
+    if(!ctx->swapchain.setup)
     {
         return FALSE;
     }
+
+    ctx->swapchain.setup = FALSE;
 
     // Destroy swapchain dependend objects
     vc_handle_mgr_destroy_marked(&ctx->handle_manager, VC_HANDLE_MARKER_SWAPCHAIN_DEPENDENT_BIT, ctx);
@@ -191,51 +195,78 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
     return TRUE;
 }
 
-void    vc_swapchain_cleanup(vc_ctx   *ctx)
+void                  vc_swapchain_cleanup(vc_ctx   *ctx)
 {
     _vc_priv_delete_swapchain(ctx);
 }
 
-b8      _vc_priv_select_swapchain_configuration(vc_ctx *ctx, swapchain_configuration_query query)
+// Transfers ownership of list to caller
+VkSurfaceFormatKHR   *_vc_priv_get_supported_swapchain_formats(VkPhysicalDevice device, VkSurfaceKHR surface, u32 *count)
 {
-    // Select swapchain format
-    u32 format_count = 0;
     VkSurfaceFormatKHR *formats;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, NULL);
-    formats = mem_allocate(format_count * sizeof(VkSurfaceFormatKHR), MEMORY_TAG_RENDERER);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count, formats);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, count, NULL);
+    if(count == 0)
+    {
+        ERROR("Swapchain does not support any formats.");
+        *count = 0;
+        return NULL;
+    }
+
+    formats = mem_allocate(*count * sizeof(VkSurfaceFormatKHR), MEMORY_TAG_RENDERER);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, count, formats);
+
+    INFO("Formats supported by swapchain :");
+    for(int i = 0; i < *count; i++)
+    {
+        INFO( "\t format=%s - color_space=%s", vc_priv_VkFormat_to_str(formats[i].format), vc_priv_VkColorSpaceKHR_to_str(formats->colorSpace) );
+    }
+    return formats;
+}
+
+b8    _vc_priv_select_swapchain_configuration(vc_ctx *ctx, swapchain_configuration_query query)
+{
+    u32 format_count                = 0;
+    VkSurfaceFormatKHR *formats_khr = _vc_priv_get_supported_swapchain_formats(ctx->vk_selected_physical_device, ctx->vk_window_surface, &format_count);
+    if( (!formats_khr) || (format_count == 0) )
+    {
+        FATAL("Swapchain not supported.");
+        return FALSE;
+    }
 
     /* ---------------- Swapchain format ---------------- */
-    ctx->swapchain_conf.swapchain_format = formats[0]; // Fallback
-    b8 found_format = FALSE;
-    TRACE("Supported surface formats :");
-    for (int i = 0; i < format_count; i++)
+    format_set candidates =
     {
-        TRACE( "\t%s - %s,", vc_priv_VkFormat_to_str(formats[i].format), vc_priv_VkColorSpaceKHR_to_str(formats[i].colorSpace) );
-        if ( (formats[i].format == VK_FORMAT_B8G8R8A8_SRGB || formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
-        {
-            ctx->swapchain_conf.swapchain_format = formats[i];
-            found_format                         = TRUE;
-            break;
-        }
+        0
+    };
+    candidates.formats      = alloca(sizeof(VkFormat) * format_count);
+    candidates.format_count = format_count;
+
+    for(int i = 0; i < format_count; i++)
+    {
+        candidates.formats[i] = formats_khr[i].format;
     }
-    if(!found_format)
+
+    u32 found_format_index = 0;
+    if( vc_format_query_index(ctx, query.query, candidates, &found_format_index) )
     {
-        ERROR(
-            "Not found requested format, using fallback format : format=%s, color_space=%s",
-            vc_priv_VkFormat_to_str(ctx->swapchain_conf.swapchain_format.format),
-            vc_priv_VkColorSpaceKHR_to_str(ctx->swapchain_conf.swapchain_format.colorSpace)
-            );
-    }
-    else
-    {
+        ctx->swapchain_conf.swapchain_format = formats_khr[found_format_index];
         TRACE(
             "Found a format for the swapchain : format=%s, color_space=%s",
             vc_priv_VkFormat_to_str(ctx->swapchain_conf.swapchain_format.format),
             vc_priv_VkColorSpaceKHR_to_str(ctx->swapchain_conf.swapchain_format.colorSpace)
             );
     }
-    mem_free(formats);
+    else
+    {
+        ctx->swapchain_conf.swapchain_format = formats_khr[0];
+        ERROR(
+            "Not found requested format, using fallback format : format=%s, color_space=%s",
+            vc_priv_VkFormat_to_str(ctx->swapchain_conf.swapchain_format.format),
+            vc_priv_VkColorSpaceKHR_to_str(ctx->swapchain_conf.swapchain_format.colorSpace)
+            );
+    }
+
+    mem_free(formats_khr);
 
     /* ---------------- Present mode ---------------- */
     u32 present_mode_count = 0;
@@ -395,3 +426,4 @@ swapchain_configuration    vc_swapchain_configuration_get(vc_ctx   *ctx)
 {
     return ctx->swapchain_conf;
 }
+
