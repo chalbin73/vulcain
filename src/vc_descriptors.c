@@ -48,8 +48,14 @@ b8                   _vc_priv_descriptor_set_destroy(vc_ctx *ctx, vc_priv_man_de
     return TRUE;
 }
 
-vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc, vc_descriptor_set_layout set_layout)
+vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc)
 {
+    // We can create set layout on the fly :
+    //   If the user creates it before this call it is gonna be grabed by the cache
+    //   If the user wants to create it after this call, it will be already in the cache anyways
+    //  => So useless to ask the user for it
+    vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(ctx, desc_set_desc);
+
     vc_priv_man_descriptor_set_layout *man_set_layout = vc_handle_mgr_ptr(&ctx->handle_manager, set_layout);
     vc_priv_man_descriptor_set set                    =
     {
@@ -104,3 +110,4 @@ vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc d
 }
 
 // Rural
+

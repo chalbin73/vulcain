@@ -1009,10 +1009,11 @@ vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descrip
  *
  * @param ctx
  * @param desc_set_desc Description of the set
- * @param set_layout The set layout for this set
  * @return vc_descriptor_set The descriptor set
+ *
+ * @note descriptor set layouts are handled automatically
  */
-vc_descriptor_set           vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc, vc_descriptor_set_layout set_layout);
+vc_descriptor_set           vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc);
 
 /* ---------------- Pipelines ---------------- */
 
