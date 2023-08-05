@@ -790,7 +790,7 @@ void                        vc_command_buffer_reset(vc_ctx *ctx, vc_command_buff
  * @param command_buffer The command buffer
  * @param desc The parameters of the dispatch
  */
-void                        vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
+void                        vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
 
 /**
  * @brief Commands the binding a descriptor set
@@ -800,7 +800,7 @@ void                        vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_c
  * @param pipeline The pipline which will use the command buffer (Only uses the layout of this pipline)
  * @param desc_set The descriptor set to bind
  */
-void                        vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set);
+void                        vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set);
 
 /**
  * @brief Copies one image to another

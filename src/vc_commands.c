@@ -9,7 +9,7 @@ b8                   _vc_priv_command_buffer_destroy(vc_ctx *ctx, vc_priv_man_co
     return TRUE;
 }
 
-vc_command_buffer vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level)
+vc_command_buffer    vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level)
 {
     VkCommandBufferAllocateInfo alloc_ci =
     {
@@ -82,7 +82,7 @@ void    vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer)
 /* ---------------- COMMANDS ---------------- */
 /* ---------------- Pipelines relative commands ---------------- */
 
-void    vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc)
+void    vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc)
 {
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
     vc_priv_man_compute_pipe *pipe  = vc_handle_mgr_ptr(&ctx->handle_manager, desc->pipe);
@@ -93,7 +93,7 @@ void    vc_command_buffer_compute_pipeline(vc_ctx *ctx, vc_command_buffer comman
 
 /* ---------------- Descriptors relative commands ---------------- */
 
-void    vc_command_buffer_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set)
+void    vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set)
 {
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
     vc_priv_man_descriptor_set *set = vc_handle_mgr_ptr(&ctx->handle_manager, desc_set);
@@ -249,3 +249,4 @@ void    vc_command_execute_secondary_buffers(vc_ctx *ctx, vc_command_buffer comm
 
     vkCmdExecuteCommands(buf->command_buffer, command_buffer_count, secs);
 }
+
