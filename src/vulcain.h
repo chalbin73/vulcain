@@ -396,7 +396,8 @@ typedef struct
 {
     u8                         *shader_code;
     u32                         shader_code_length;
-    vc_descriptor_set_layout    set_layout;
+    u32                         set_layout_count;
+    vc_descriptor_set_layout   *set_layouts;
 } compute_pipe_desc;
 
 /**
@@ -798,9 +799,22 @@ void                        vc_command_compute_pipeline(vc_ctx *ctx, vc_command_
  * @param ctx
  * @param command_buffer The command buffer
  * @param pipeline The pipline which will use the command buffer (Only uses the layout of this pipline)
+ * @param descriptor_set_index The index to which the descriptor set is to be bound
  * @param desc_set The descriptor set to bind
  */
-void                        vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set);
+void                        vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_index, vc_descriptor_set desc_set);
+
+/**
+ * @brief Commands the binding of a set of descriptor sets
+ *
+ * @param ctx
+ * @param command_buffer The command buffer
+ * @param pipeline The pipline which will use the command buffer (Only uses the layout of this pipline)
+ * @param descriptor_set_start_index The first index on which desc sets will be bound
+ * @parma The number of sets to bind
+ * @param desc_sets The descriptor sets to bind
+ */
+void                        vc_command_bind_descriptor_sets(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_start_index, u32 descriptor_set_count, vc_descriptor_set *desc_sets);
 
 /**
  * @brief Copies one image to another

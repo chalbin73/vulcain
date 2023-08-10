@@ -27,11 +27,19 @@ vc_compute_pipe    vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
     VkShaderModule shad_mod;
     VK_CHECKH(vkCreateShaderModule(ctx->vk_device, &mod_ci, NULL, &shad_mod), "Could not create a compute shader module !");
 
+    VkDescriptorSetLayout *layouts = alloca(sizeof(VkDescriptorSetLayout) * desc->set_layout_count);
+
+    for(int i = 0; i < desc->set_layout_count; i++)
+    {
+        vc_priv_man_descriptor_set_layout *set_layout = vc_handle_mgr_ptr(&ctx->handle_manager, desc->set_layouts[i]);
+        layouts[i] = set_layout->set_layout;
+    }
+
     VkPipelineLayoutCreateInfo layout_ci =
     {
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount         = (desc->set_layout == VC_NULL_HANDLE) ? 0 : 1,
-        .pSetLayouts            = (desc->set_layout == VC_NULL_HANDLE) ? NULL : vc_handle_mgr_ptr(&ctx->handle_manager, desc->set_layout),
+        .setLayoutCount         = desc->set_layout_count,
+        .pSetLayouts            = layouts,
         .pushConstantRangeCount = 0,
     };
 
@@ -318,3 +326,4 @@ vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc 
 
     return hndl;
 }
+

@@ -93,7 +93,7 @@ void    vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffe
 
 /* ---------------- Descriptors relative commands ---------------- */
 
-void    vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, vc_descriptor_set desc_set)
+void    vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_index, vc_descriptor_set desc_set)
 {
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
     vc_priv_man_descriptor_set *set = vc_handle_mgr_ptr(&ctx->handle_manager, desc_set);
@@ -123,7 +123,7 @@ void    vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_bu
         buf->command_buffer,
         bind_point,
         layout,
-        0,
+        descriptor_set_index,
         1,
         &set->set,
         0,
@@ -131,6 +131,55 @@ void    vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_bu
         );
 }
 
+void    vc_command_bind_descriptor_sets(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_start_index, u32 descriptor_set_count, vc_descriptor_set *desc_sets)
+{
+    if(descriptor_set_count == 0 || !desc_sets)
+    {
+        return;
+    }
+
+    vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
+    void *pipeline_obj              = vc_handle_mgr_ptr(&ctx->handle_manager, pipeline);
+    VkPipelineLayout layout         = VK_NULL_HANDLE;
+    VkPipelineBindPoint bind_point  = 0;
+
+    if (*( (vc_pipeline_type *)pipeline_obj ) == VC_PIPELINE_TYPE_COMPUTE)
+    {
+        vc_priv_man_compute_pipe *comp_pipe = pipeline_obj;
+        layout     = comp_pipe->layout;
+        bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+    }
+    else if (*( (vc_pipeline_type *)pipeline_obj ) == VC_PIPELINE_TYPE_GRAPHICS)
+    {
+        vc_priv_man_graphics_pipe *grap_pipe = pipeline_obj;
+        bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        layout     = grap_pipe->layout;
+    }
+    else
+    {
+        FATAL("Pipeline object error.");
+        return;
+    }
+
+    VkDescriptorSet *sets = alloca(sizeof(VkDescriptorSet) * descriptor_set_count);
+
+    for(int i = 0; i < descriptor_set_count; i++)
+    {
+        vc_priv_man_descriptor_set *set = vc_handle_mgr_ptr(&ctx->handle_manager, desc_sets[i]);
+        sets[i] = set->set;
+    }
+
+    vkCmdBindDescriptorSets(
+        buf->command_buffer,
+        bind_point,
+        layout,
+        descriptor_set_start_index,
+        descriptor_set_count,
+        sets,
+        0,
+        NULL
+        );
+}
 void    vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, render_pass_begin_desc desc)
 {
     vc_priv_man_command_buffer *buf      = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
