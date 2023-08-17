@@ -1,3 +1,10 @@
+/**
+ * @file
+ * @brief Main header for vulcain, a "simple", vulkan, wrapper layer
+ *        with handle system.
+ *
+ */
+
 #pragma once
 
 #include <vulkan/vulkan.h>
@@ -7,12 +14,6 @@
 #include "base.h"
 #include "vc_handles.h"
 #include "tp/vk_mem_alloc.h"
-
-/**
- * @brief Main header for vulcain, a "simple", vulkan, wrapper layer
- *        with handle system.
- *
- */
 
 /**
  *
@@ -126,11 +127,16 @@ typedef struct swapchain_desc
  */
 typedef enum
 {
-    VC_QUEUE_MAIN = 0,     // Main queue, supporting graphics, present and compute, main work queue
-    VC_QUEUE_COMPUTE,     // Async compute, for compute work that can be async to main work
-    VC_QUEUE_TRANSFER,     // DMA transfer queues usually
-    VC_QUEUE_TYPE_COUNT,   // Counts actual number of queue types, QUEUE_IGNORED is a special case
-    VC_QUEUE_IGNORED,     // For barrier
+    /**< Main queue, supporting graphics, present and compute, main work queue */
+    VC_QUEUE_MAIN = 0,
+    /**< Async compute, for compute work that can be async to main work */
+    VC_QUEUE_COMPUTE,
+    /**< DMA transfer queues usually */
+    VC_QUEUE_TRANSFER,
+    /**< Counts actual number of queue types, QUEUE_IGNORED is a special case */
+    VC_QUEUE_TYPE_COUNT,
+    /**< For barrier */
+    VC_QUEUE_IGNORED,
 } vc_queue_type;
 
 /**
@@ -538,11 +544,17 @@ typedef struct
  */
 typedef struct
 {
+    /** The type of descriptor */
     VkDescriptorType             descriptor_type;
     uint32_t                     descriptor_count;
-    VkShaderStageFlags           stage_flags;
 
+    /** The stage of the descriptor */
+    VkShaderStageFlags           stage_flags;
+    
+    /** If descriptor is a buffer, fill this info */
     descriptor_binding_buffer   *buffer_info;
+
+    /** If descriptor is an image, fill this info */
     descriptor_binding_image    *image_info;
 } descriptor_binding_desc;
 
@@ -911,13 +923,59 @@ void                        vc_command_draw_indexed(vc_ctx *ctx, vc_command_buff
  */
 void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer src, vc_buffer dst, u32 region_count, VkBufferCopy *regions);
 
+
+/**
+ * @brief Binds a vertex buffer for a pipeline
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param buffer The buffer to use as vertex buffer
+ * @param binding The binding index
+ * @param offset The offset in the vertex buffer to bind
+ */
 void                        vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u32 binding, u64 offset);
+
+/**
+ * @brief Bind a index buffer for a pipeline
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param buffer The buffer to use as index buffer
+ * @param offset The offset in the buffer to bind
+ * @param index_type The type of index in the buffer
+ */
 void                        vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u64 offset, VkIndexType index_type);
 
+/**
+ * @brief Submits a copy buffer to image command
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param src The source buffer
+ * @param dst The destination buffer
+ * @param dst_layout The layout of the destination image subressources
+ * @param region_count The number of regions to copy
+ * @param regions An array of regions to copy
+ */
 void                        vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer src, vc_image dst, VkImageLayout dst_layout, u32 region_count, VkBufferImageCopy *regions);
 
-
+/**
+ * @brief Executes a set of secondary buffers within a primary buffer
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param command_buffer_count The number of secondary buffers
+ * @param secondary_buffers The secondary buffers
+ */
 void                        vc_command_execute_secondary_buffers(vc_ctx *ctx, vc_command_buffer command_buffer, u32 command_buffer_count, vc_command_buffer *secondary_buffers);
+
+/**
+ * @brief Executes a set of secondary buffers within a primary buffer
+ *
+ * @param ctx
+ * @param command_buffer
+ * @param secondary_buffer The secondary buffer
+ */
 void                        vc_command_execute_secondary_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_command_buffer secondary_buffer);
 
 /* ---------------- Synchronisation ---------------- */
@@ -1043,10 +1101,10 @@ vc_descriptor_set           vc_descriptor_set_create(vc_ctx *ctx, descriptor_set
  * @param to What pipeline stages will depend on this barrier
  * @param src_access The accesses made on the image by the previous pipline stages
  * @param dst_access The accesses made on the image by the next pipeline stages
- * @param src_queue The source queue (can be @c{VC_QUEUE_IGNORED})
- * @param dst_queue The destination queue (can be @c{VC_QUEUE_IGNORED})
+ * @param src_queue The source queue (can be #VC_QUEUE_IGNORED)
+ * @param dst_queue The destination queue (can be #VC_QUEUE_IGNORED)
  * @param subresource_range The subresource range on which to apply the memory dependency
- * @note If @c{src_queue} and @c{dst_queue} are @c{VC_QUEUE_IGNORED} no queue ownership transfer is made
+ * @note If @p src_queue and @p dst_queue are #VC_QUEUE_IGNORED no queue ownership transfer is made
  */
 void                        vc_command_image_pipe_barrier(vc_ctx                    *ctx,
                                                           vc_command_buffer          command_buffer,
@@ -1123,9 +1181,35 @@ vc_image            vc_image_allocate(vc_ctx *ctx, image_create_desc desc);
  */
 void                vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
 
-
+/**
+ * @brief Creates a sampler
+ *
+ * @param ctx
+ * @param desc
+ * @return
+ */
 vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc);
+
+/**
+ * @brief Creates an image view
+ *
+ * @param ctx
+ * @param image The image on which to create the view
+ * @param desc
+ * @return
+ */
 vc_image_view       vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc);
+
+/**
+ * @brief Fills an image from a buffer
+ *
+ * @param ctx
+ * @param img
+ * @param src
+ * @param transitioned_layout The layout in which the image should be at the end
+ * @param aspect_dst The aspect in which to copy the data
+ * @param queue The queue on which to submit the commands
+ */
 void                vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkImageLayout transitioned_layout, VkImageAspectFlags aspect_dst, vc_queue_type queue);
 /* ---------------- Graphics ---------------- */
 /* ---------------- Render pass ---------------- */
@@ -1181,7 +1265,24 @@ void                vc_queue_flags_to_queue_indices_list(vc_ctx *ctx, vc_queue_f
  */
 u32                 vc_u32_flags_set_bits(u32    flag);
 
+/**
+ * @brief Queries a format based on requirements
+ *
+ * @param ctx The context
+ * @param query The requirements
+ * @param candidates Candidates to check
+ * @param index The index in the format_set of the first valid format
+ * @return Weher or not a format was found
+ */
 b8                  vc_format_query_index(vc_ctx *ctx, format_query query, format_set candidates, u32 *index);
 
+/**
+ * @brief Queries a format based on requirements
+ *
+ * @param ctx The context
+ * @param query The requirements
+ * @param candidates Candidates to check
+ * @return The first found format or an invalid format (NULL)
+ */
 VkFormat            vc_format_query(vc_ctx *ctx, format_query query, format_set candidates);
 
