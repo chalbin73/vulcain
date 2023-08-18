@@ -170,27 +170,41 @@ b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
     {
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
     };
-    inst_ci.pApplicationInfo      = &app_info;
-    inst_ci.enabledExtensionCount = desc->extension_count + (desc->enable_debugging ? 1 : 0);
-    inst_ci.enabledLayerCount     = desc->enable_debugging ? 1 : 0;
+    inst_ci.pApplicationInfo = &app_info;
 
-    char *debug_ext = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    char **exts = darray_create(char *);
+
+    // Prepare names here, so their liftimes are long enough (should make a better string implementation for this specific problem)
+    char *debug_ext_name = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
     if (desc->enable_debugging)
     {
-        // Concatenate requested exts to debug ext
-        inst_ci.ppEnabledExtensionNames = mem_allocate(sizeof(char *) * inst_ci.enabledExtensionCount, MEMORY_TAG_DARRAY);
+        darray_push(exts, debug_ext_name);
+    }
 
-        for (int i = 0; i < desc->extension_count; i++)
-        {
-            *( (char **)&inst_ci.ppEnabledExtensionNames[i + 1] ) = desc->extensions[i];
-        }
-        *( (char **)&inst_ci.ppEnabledExtensionNames[0] ) = debug_ext;
-    }
-    else
+    for (int i = 0; i < desc->extension_count; i++)
     {
-        inst_ci.ppEnabledExtensionNames = (const char * const *)desc->extensions;
+        darray_push(exts, desc->extensions[i]);
     }
+
+    if(desc->enable_windowing)
+    {
+        u32 win_ext_count = 0;
+        char **win_exts   = desc->windowing_system.get_required_instance_exts(&win_ext_count);
+
+        TRACE("Windowing enabled, windowing system requires following extensions :");
+        for(int i = 0; i < win_ext_count; i++)
+        {
+            TRACE("\t%s", win_exts[i]);
+            darray_push(exts, win_exts[i]);
+        }
+    }
+
+    inst_ci.enabledExtensionCount   = darray_length(exts);
+    inst_ci.ppEnabledExtensionNames = (const char * const *)exts;
+
+    // Layers
+    inst_ci.enabledLayerCount = desc->enable_debugging ? 1 : 0;
     char *layers[1] =
     {
         "VK_LAYER_KHRONOS_validation"
@@ -246,7 +260,7 @@ b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
             }
         }
     }
-    TRACE("Extensions and layers all supported.");
+    INFO("Extensions and layers all supported. Creating instance.");
 
     VK_CHECKR(vkCreateInstance(&inst_ci, NULL, &ctx->vk_instance), "Could not create instance");
 
@@ -254,8 +268,6 @@ b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
     ctx->debug_enabled      = desc->enable_debugging;
     if (desc->enable_debugging)
     {
-        mem_free( (void *)inst_ci.ppEnabledExtensionNames );
-
         VkDebugUtilsMessengerCreateInfoEXT dbg_info =
         {
             VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT
@@ -266,7 +278,9 @@ b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
         dbg_info.pUserData       = NULL;
 
         VK_CHECKR(vc_vkCreateDebugUtilsMessengerEXT(ctx->vk_instance, &dbg_info, NULL, &ctx->vk_debug_messenger), "Debug messenger could not be created");
+        INFO("Debugging messenger setup");
     }
+    darray_destroy(exts);
     return TRUE;
 }
 

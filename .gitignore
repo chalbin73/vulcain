@@ -2,6 +2,7 @@
 bin/
 lib/
 build/
+doc/
 compile_commands.json
 *.a
 *.log
