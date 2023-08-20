@@ -113,7 +113,7 @@ typedef struct swapchain_desc
     swapchain_recreated_callback_func    recreation_callback;
 
     /** @brief Called when swapchain is destroyed, used to free user allocated data (handle created during recreation callback are automatically freed) */
-    swapchain_destroyed_callback_func    destruction_callack;
+    swapchain_destroyed_callback_func    destruction_callback;
     void                                *callback_user_data;
 
     VkImageUsageFlags                    swapchain_images_usage;
@@ -550,7 +550,7 @@ typedef struct
 
     /** The stage of the descriptor */
     VkShaderStageFlags           stage_flags;
-    
+
     /** If descriptor is a buffer, fill this info */
     descriptor_binding_buffer   *buffer_info;
 
@@ -1029,9 +1029,10 @@ b8                          vc_swapchain_acquire_image(vc_ctx *ctx, vc_swp_img_i
  *
  * @param ctx
  * @param image_id The id of the previously acquired image
+ * @param wait_sem The semaphore on which to wait before presenting the image
  * @returns b8 FALSE if a swapchain recreation was made, thus the frame need to be cancelled, and restarted
  */
-b8                          vc_swapchain_present_image(vc_ctx *ctx, vc_swp_img_id image_id);
+b8                          vc_swapchain_present_image(vc_ctx *ctx, u32 image_id, vc_semaphore wait_sem);
 
 /**
  * @brief Gets a pointer to an array of image handles to the swapchain images (can be indexed using @c{vc_swp_img_id})

@@ -59,9 +59,9 @@ b8    _vc_priv_delete_swapchain(vc_ctx   *ctx)
     vc_handle_mgr_destroy_marked(&ctx->handle_manager, VC_HANDLE_MARKER_SWAPCHAIN_DEPENDENT_BIT, ctx);
 
     // Destruction callback
-    if(ctx->swapchain.desc.destruction_callack)
+    if(ctx->swapchain.desc.destruction_callback)
     {
-        ctx->swapchain.desc.destruction_callack(ctx, ctx->swapchain.desc.callback_user_data);
+        ctx->swapchain.desc.destruction_callback(ctx, ctx->swapchain.desc.callback_user_data);
     }
 
     vkDestroySwapchainKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, NULL);
@@ -356,8 +356,8 @@ b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, swapchain_desc desc, VkEx
 
 b8    vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquired_semaphore)
 {
-    vc_priv_man_semaphore *sem = vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore);
-    VkResult result            = vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, sem->semaphore, VK_NULL_HANDLE, image_id);
+    vc_priv_man_semaphore *sem = acquired_semaphore ? vc_handle_mgr_ptr(&ctx->handle_manager, acquired_semaphore) : NULL;
+    VkResult result            = vkAcquireNextImageKHR(ctx->vk_device, ctx->swapchain.vk_swapchain, U64_MAX, acquired_semaphore ? sem->semaphore : VK_NULL_HANDLE, VK_NULL_HANDLE, image_id);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
@@ -371,7 +371,8 @@ b8    vc_swapchain_acquire_image(vc_ctx *ctx, u32 *image_id, vc_semaphore acquir
     return TRUE;
 }
 
-b8    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
+// TODO: Support multiple semaphores
+b8    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id, vc_semaphore wait_sem)
 {
     VkResult result = VK_SUCCESS;
     vkQueuePresentKHR(
@@ -384,7 +385,8 @@ b8    vc_swapchain_present_image(vc_ctx *ctx, u32 image_id)
             .pSwapchains    = &ctx->swapchain.vk_swapchain,
             .pResults       = &result,
 
-            .waitSemaphoreCount = 0,
+            .waitSemaphoreCount = wait_sem ? 1 : 0,
+            .pWaitSemaphores    = wait_sem ? &( (vc_priv_man_semaphore *)vc_handle_mgr_ptr(&ctx->handle_manager, wait_sem) )->semaphore : NULL,
 
         }
         );

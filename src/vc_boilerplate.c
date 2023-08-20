@@ -1,3 +1,7 @@
+// Static asserts
+#define BASE_IMPLEMENTATION
+#include "base.h"
+
 #include "vc_handles.h"
 #include "vc_managed_types.h"
 #include "vulcain.h"
@@ -5,9 +9,6 @@
 #include <string.h>
 #include "vc_private.h"
 
-// Static asserts
-#define BASE_IMPLEMENTATION
-#include "base.h"
 
 //TODO: Cut this file into smaller parts
 
