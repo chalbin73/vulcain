@@ -483,10 +483,10 @@ typedef struct
 
 
 #define VC_COMPONENT_MAPPING_ID                        \
-    (VkComponentMapping){ .a = VK_COMPONENT_SWIZZLE_A, \
-                          .r = VK_COMPONENT_SWIZZLE_R, \
-                          .g = VK_COMPONENT_SWIZZLE_G, \
-                          .b = VK_COMPONENT_SWIZZLE_B }
+        (VkComponentMapping){ .a = VK_COMPONENT_SWIZZLE_A, \
+                              .r = VK_COMPONENT_SWIZZLE_R, \
+                              .g = VK_COMPONENT_SWIZZLE_G, \
+                              .b = VK_COMPONENT_SWIZZLE_B }
 
 
 
@@ -666,39 +666,39 @@ char                  *vc_priv_VkDebugUtilsMessageSeverityFlagBitsEXT_to_prefix_
 
 /* ---------------- Error checking ---------------- */
 #define VK_CHECK(s, m)                                                                                                 \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        VkResult _res = s;                                                                                             \
-        if (_res != VK_SUCCESS)                                                                                        \
-        {                                                                                                              \
-            ERROR( "VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res) ); \
-        }                                                                                                              \
-    }                                                                                                                  \
-    while (0);
+        do                                                                                                                 \
+        {                                                                                                                  \
+            VkResult _res = s;                                                                                             \
+            if (_res != VK_SUCCESS)                                                                                        \
+            {                                                                                                              \
+                ERROR( "VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res) ); \
+            }                                                                                                              \
+        }                                                                                                                  \
+        while (0);
 
 #define VK_CHECKR(s, m)                                                                                                \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        VkResult _res = s;                                                                                             \
-        if (_res != VK_SUCCESS)                                                                                        \
-        {                                                                                                              \
-            ERROR( "VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res) ); \
-            return FALSE;                                                                                              \
-        }                                                                                                              \
-    }                                                                                                                  \
-    while (0);
+        do                                                                                                                 \
+        {                                                                                                                  \
+            VkResult _res = s;                                                                                             \
+            if (_res != VK_SUCCESS)                                                                                        \
+            {                                                                                                              \
+                ERROR( "VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res) ); \
+                return FALSE;                                                                                              \
+            }                                                                                                              \
+        }                                                                                                                  \
+        while (0);
 
 #define VK_CHECKH(s, m)                                                                                                \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        VkResult _res = s;                                                                                             \
-        if (_res != VK_SUCCESS)                                                                                        \
-        {                                                                                                              \
-            ERROR( "VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res) ); \
-            return VC_NULL_HANDLE;                                                                                     \
-        }                                                                                                              \
-    }                                                                                                                  \
-    while (0);
+        do                                                                                                                 \
+        {                                                                                                                  \
+            VkResult _res = s;                                                                                             \
+            if (_res != VK_SUCCESS)                                                                                        \
+            {                                                                                                              \
+                ERROR( "VKERROR: '%s' %s:%d error=%d:(%s).", m, __FILE__, __LINE__, _res, vc_priv_VkResult_to_str(_res) ); \
+                return VC_NULL_HANDLE;                                                                                     \
+            }                                                                                                              \
+        }                                                                                                                  \
+        while (0);
 
 /* ---------------- Context ---------------- */
 

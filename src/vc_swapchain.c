@@ -85,12 +85,14 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
 {
     VkSwapchainCreateInfoKHR sc_ci =
     {
-        .sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface          = ctx->vk_window_surface,
-        .minImageCount    = ctx->swapchain_conf.image_count,
-        .imageFormat      = ctx->swapchain_conf.swapchain_format.format,
-        .imageColorSpace  = ctx->swapchain_conf.swapchain_format.colorSpace,
-        .imageExtent      = (VkExtent2D){ .width = extent.width,              .height= extent.height },
+        .sType           = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface         = ctx->vk_window_surface,
+        .minImageCount   = ctx->swapchain_conf.image_count,
+        .imageFormat     = ctx->swapchain_conf.swapchain_format.format,
+        .imageColorSpace = ctx->swapchain_conf.swapchain_format.colorSpace,
+        .imageExtent     = (VkExtent2D){
+            .width        = extent.width,                                     .height= extent.height
+        },
         .imageArrayLayers = 1,
         .imageUsage       = desc.swapchain_images_usage,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -135,6 +137,7 @@ b8    _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D ext
 
     for (int i = 0; i < ctx->swapchain.swapchain_image_count; i++)
     {
+
         vc_priv_man_image img =
         {
             .external   = TRUE,
@@ -342,7 +345,7 @@ b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, swapchain_desc desc, VkEx
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &ctx->swapchain_conf.capabilities);
 
-    if (ctx->swapchain_conf.capabilities.maxImageExtent.width == U32_MAX)
+    if (ctx->swapchain_conf.capabilities.currentExtent.width == U32_MAX)
     {
         extent->width  = CLAMP(width, ctx->swapchain_conf.capabilities.minImageExtent.width, ctx->swapchain_conf.capabilities.maxImageExtent.width);
         extent->height = CLAMP(height, ctx->swapchain_conf.capabilities.minImageExtent.height, ctx->swapchain_conf.capabilities.maxImageExtent.height);
