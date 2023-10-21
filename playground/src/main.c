@@ -1,7 +1,7 @@
 #include <vulkan/vulkan_core.h>
 #define VC_ENABLE_WINDOWING_GLFW 1
 
-#include "base/base.h"
+#include <base.h>
 #include <vulcain.h>
 #include <GLFW/glfw3.h>
 #include <fast_obj.h>
@@ -66,7 +66,9 @@ void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info in
         render_attachments_set render_att =
         {
             .attachment_count = 2,
-            .attachments      = (vc_image_view[2]){ vc_swapchain_get_image_view_hndls(ctx)[i], depth_buffer_view }
+            .attachments      = (vc_image_view[2]){
+                vc_swapchain_get_image_view_hndls(ctx)[i], depth_buffer_view
+            }
         };
 
         frambuffers[i] = vc_framebuffer_create(
@@ -85,7 +87,6 @@ void    swp_recreation_cllbck(vc_ctx *ctx, void *data, swapchain_created_info in
     };
 
     sem = vc_semaphore_create(ctx);
-
 }
 
 void    swp_destruction_cllbck(vc_ctx *ctx, void *data)
@@ -96,7 +97,7 @@ void    swp_destruction_cllbck(vc_ctx *ctx, void *data)
 int     main(i32 argc, char **argv)
 {
     INFO("/* ---------------- START ---------------- */");
-    INFO("Hello, World ! Welcome to vulcain !");
+    INFO("Hello, World ! Welcome to vulcain's playground !");
 
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -213,7 +214,7 @@ int     main(i32 argc, char **argv)
             .swapchain_images_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             .callback_user_data     = (void *)&pass,
             .recreation_callback    = swp_recreation_cllbck,
-            .destruction_callack    = swp_destruction_cllbck,
+            .destruction_callback   = swp_destruction_cllbck,
         }
         );
 
@@ -229,7 +230,12 @@ int     main(i32 argc, char **argv)
         );
 
 
-    fastObjMesh *mesh = fast_obj_read("playground/test_res/rat.obj");
+    fastObjMesh *mesh = fast_obj_read("test_res/rat.obj");
+    if(mesh == NULL)
+    {
+        FATAL("Mesh read error. Aborting");
+        return 1;
+    }
 
     vc_buffer index_buffer = vc_buffer_allocate(
         &ctx,
@@ -279,13 +285,13 @@ int     main(i32 argc, char **argv)
     vc_buffer_coherent_staged_write(&ctx, index_buffer, 0, mesh->index_count * sizeof(u32), indices, VC_QUEUE_MAIN);
     TRACE("Wrinting vertices");
     vc_buffer_coherent_staged_write(&ctx, vertex_buffer, 0, mesh->position_count * sizeof(vertex), verts, VC_QUEUE_MAIN);
-    
+
 
     TRACE("Mesh loaded");
 //fast_obj_destroy(mesh);
 
     i32 tex_w, tex_h, tex_c = 0;
-    u8 *data                = stbi_load("playground/test_res/rat.png", &tex_w, &tex_h, &tex_c, 4);
+    u8 *data                = stbi_load("test_res/rat.png", &tex_w, &tex_h, &tex_c, 4);
 
     ASSERT(tex_c == 4);
     INFO("Image is %dx%d c%d", tex_w, tex_h, tex_c);
@@ -390,12 +396,12 @@ int     main(i32 argc, char **argv)
     vc_buffer_coherent_staged_write(&ctx, mvp_buf, 0, sizeof(projection_matrix), projection_matrix, VC_QUEUE_MAIN);
 
     vc_descriptor_set_layout set_layout = vc_descriptor_set_layout_create(&ctx, desc_set_desc);
-    vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc, set_layout);
+    vc_descriptor_set set               = vc_descriptor_set_create(&ctx, desc_set_desc);
 
     graphics_pipeline_code_desc code;
-    code.vertex_code          = fio_read_whole_file("playground/shaders/a.vert.spv", &code.vertex_code_size);
+    code.vertex_code          = fio_read_whole_file("shaders/a.vert.spv", &code.vertex_code_size);
     code.vertex_entry_point   = "main";
-    code.fragment_code        = fio_read_whole_file("playground/shaders/a.frag.spv", &code.fragment_code_size);
+    code.fragment_code        = fio_read_whole_file("shaders/a.frag.spv", &code.fragment_code_size);
     code.fragment_entry_point = "main";
 
     vc_graphics_pipe graphics_pipe = vc_graphics_pipe_create(
@@ -473,20 +479,20 @@ int     main(i32 argc, char **argv)
     b8 recreated = FALSE;
 
     void *matrices = mem_allocate(sizeof(projection_matrix) * 3, MEMORY_TAG_RENDERER);
-    //u64 time       = platform_millis();
+    u64 time       = platform_millis();
     f32 v[VEC3_SIZE];
 
     while ( !glfwWindowShouldClose(window) )
     {
-        /*
-           u64 now = platform_millis();
-           if ( (now - time) < 16 )
+
+        u64 now = platform_millis();
+        if ( (now - time) < 16 )
             continue;
 
-           time = now;
-           f32 t = (f32)time / 1000.0f;
-           (void)t;
-         */
+        time = now;
+        f32 t = (f32)time / 1000.0f;
+        (void)t;
+
         mat4_identity(model_matrix);
         mat4_rotation_z(model_matrix, t);
         mat4_translate( model_matrix, model_matrix, vec3(v, 0, 0, -0.3) );
@@ -551,7 +557,7 @@ int     main(i32 argc, char **argv)
             );
 
         vc_command_pipeline_bind(&ctx, buf, graphics_pipe);
-        vc_command_buffer_bind_descriptor_set(&ctx, buf, graphics_pipe, set);
+        vc_command_bind_descriptor_set(&ctx, buf, graphics_pipe, 0, set);
 
         vc_command_bind_vertex_buffer(&ctx, buf, vertex_buffer, 0, 0);
         vc_command_bind_index_buffer(&ctx, buf, index_buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -569,7 +575,7 @@ int     main(i32 argc, char **argv)
             );
         vc_queue_wait_idle(&ctx, VC_QUEUE_MAIN);
 
-        vc_swapchain_present_image(&ctx, iid);
+        vc_swapchain_present_image(&ctx, iid, VC_NULL_HANDLE);
 
         glfwPollEvents();
     }
@@ -580,3 +586,4 @@ int     main(i32 argc, char **argv)
 
     return 0;
 }
+

@@ -3,6 +3,16 @@
 #include "base.h"
 #include "vc_private.h"
 
+/*
+
+   Swapchain creation :
+
+
+
+
+
+ */
+
 //TODO: Find a cleaner way to do this
 b8      _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image);
 b8      _vc_priv_image_view_destroy(vc_ctx *ctx, vc_priv_man_image_view *image_view);
@@ -26,7 +36,7 @@ void    vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc)
     {
         0
     };
-    _vc_priv_get_optimal_swapchain_size(ctx, desc, &swp_extent);
+    _vc_priv_get_optimal_swapchain_size(ctx, &swp_extent);
     INFO("Create swapchain with extent of %ux%u", swp_extent.width, swp_extent.height);
     _vc_priv_create_swapchain(ctx, desc, swp_extent);
 
@@ -336,7 +346,7 @@ b8    _vc_priv_select_swapchain_configuration(vc_ctx *ctx, swapchain_configurati
     return TRUE;
 }
 
-b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, swapchain_desc desc, VkExtent2D *extent)
+b8    _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExtent2D *extent)
 {
     // Select extent
     u32 width  = 0;
