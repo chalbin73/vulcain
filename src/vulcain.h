@@ -995,8 +995,9 @@ vc_semaphore                vc_semaphore_create(vc_ctx   *ctx);
  *
  * @param ctx
  * @param desc The swapchain description
+ * @returns Wether or not the setup was successful based on the given query, swapchain creation is unspecified if this function returns false
  */
-void                        vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query);
+b8                          vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query);
 
 /**
  * @brief Returns the retrieved configuration after setting up the swapchain

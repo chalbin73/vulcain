@@ -1,16 +1,17 @@
 #include "vulcain.h"
+#include "vc_managed_types.h"
 
 // Internal functions
 
 /*
- 
-Swapchain creation process:
 
-1 - Find the optimal swapchain based on 
+   Swapchain creation process:
+
+   1 - Find the optimal swapchain based on
 
 
 
-   */
+ */
 
 /* ---------------- Swapchain ---------------- */
 b8                       _vc_priv_create_swapchain(vc_ctx *ctx, swapchain_desc desc, VkExtent2D extent);
@@ -21,6 +22,9 @@ b8                       _vc_priv_get_optimal_swapchain_size(vc_ctx *ctx, VkExte
 void                     vc_swapchain_cleanup(vc_ctx   *ctx);
 VkImageAspectFlags       vc_priv_format_infer_aspect_mask(VkFormat    input);
 
+// Need to be known by swapchain creation code
+b8                       _vc_priv_image_destroy(vc_ctx *ctx, vc_priv_man_image *image);
+b8               _vc_priv_image_view_destroy(vc_ctx *ctx, vc_priv_man_image_view *img);
 
 #define VC_PRIV_DESCRIPTOR_POOL_ALLOCATOR_ALLOC_COUNT    100
 #define VC_PRIV_DESCRIPTOR_SET_LAYOUT_CACHE_BUCKET_COUNT 17
@@ -68,24 +72,25 @@ void                     vc_priv_descriptor_set_allocator_destroy(vc_ctx *ctx, v
 /**
  * @brief Creates a descriptor set layout cache
  *
- * @param cache 
+ * @param cache
  */
 void                     vc_priv_descriptor_set_layout_cache_create(vc_descriptor_set_layout_cache   *cache);
 
 /**
  * @brief Grabs a descriptor set layout : creates it if necessary and reuses them
  *
- * @param ctx 
- * @param cache 
+ * @param ctx
+ * @param cache
  * @param info The create info
- * @return 
+ * @return
  */
 VkDescriptorSetLayout    vc_priv_descriptor_set_layout_cache_grab(vc_ctx *ctx, vc_descriptor_set_layout_cache *cache, VkDescriptorSetLayoutCreateInfo info);
 
 /**
  * @brief Destroys the cache, destroys vkDescriptorSetLayouts
  *
- * @param ctx 
- * @param cache 
+ * @param ctx
+ * @param cache
  */
 void                     vc_priv_descriptor_set_layout_cache_destroy(vc_ctx *ctx, vc_descriptor_set_layout_cache *cache);
+
