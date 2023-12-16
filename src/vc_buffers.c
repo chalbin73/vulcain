@@ -7,7 +7,7 @@ b8           _vc_priv_buffer_destroy(vc_ctx *ctx, vc_priv_man_buffer *buffer)
     return TRUE;
 }
 
-vc_buffer    vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc)
+vc_buffer    vc_buffer_allocate(vc_ctx *ctx, vc_buffer_alloc_desc alloc_desc)
 {
     u32 queue_indices[VC_QUEUE_TYPE_COUNT];
     vc_queue_flags_to_queue_indices_list(ctx, alloc_desc.queues, queue_indices);
@@ -87,7 +87,7 @@ void    vc_buffer_coherent_staged_write(vc_ctx *ctx, vc_buffer dest, u64 offset,
     {
         vc_buffer staging_buffer = vc_buffer_allocate(
             ctx,
-            (buffer_alloc_desc)
+            (vc_buffer_alloc_desc)
             {
                 .buffer_usage        = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 .required_properties = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
@@ -127,3 +127,4 @@ void    vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer
     vc_priv_man_command_buffer *cmd = vc_handle_mgr_ptr(&ctx->handle_manager, cmd_buf);
     vkCmdCopyBuffer(cmd->command_buffer, src_buf->buffer, dst_buf->buffer, region_count, regions);
 }
+

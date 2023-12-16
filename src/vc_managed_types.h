@@ -44,7 +44,7 @@ typedef struct
 
     b8                   external; // Wether or not the image is managed by an external system (e.g. swapchain)
 
-    image_create_desc    image_desc;
+    vc_image_create_desc    image_desc;
 } vc_priv_man_image;
 
 typedef struct

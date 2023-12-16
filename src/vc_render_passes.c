@@ -7,7 +7,7 @@ b8                _vc_priv_render_pass_destroy(vc_ctx *ctx, vc_priv_man_render_p
     return TRUE;
 }
 
-vc_render_pass    vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc)
+vc_render_pass    vc_render_pass_create(vc_ctx *ctx, vc_render_pass_desc desc)
 {
     VkAttachmentDescription *attachments = mem_allocate(sizeof(VkAttachmentDescription) * desc.attachment_count, MEMORY_TAG_RENDERER);
 
@@ -98,3 +98,4 @@ vc_render_pass    vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc)
 
     return hndl;
 }
+

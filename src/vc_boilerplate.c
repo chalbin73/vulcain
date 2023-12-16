@@ -14,9 +14,9 @@
 
 static const char * const VC_EXT_VK_KHR_SWAPCHAIN_name = "VK_KHR_swapchain";
 
-b8                                       _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc);
-b8                                       _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query);
-b8                                       _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
+b8                                       _vc_priv_setup_instance(vc_ctx *ctx, vc_instance_desc *desc);
+b8                                       _vc_priv_select_create_device(vc_ctx *ctx, vc_physical_device_query query);
+b8                                       _vc_priv_is_physical_device_suitable(vc_ctx *ctx, vc_physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 i32                                      _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, VkPhysicalDevice phys_device, VkSurfaceKHR surface);
 
 // All "boilerplate" objects : instance, device, queues, so on
@@ -73,7 +73,7 @@ u64    _vc_priv_u64_hash_id(void *obj, u64 size)
     return *(u64 *)obj;
 }
 
-b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query)
+b8     vc_create_ctx(vc_ctx *ctx, vc_instance_desc *desc, vc_physical_device_query *phys_device_query)
 {
     *ctx = (vc_ctx)
     {
@@ -154,7 +154,7 @@ b8     vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *ph
     return TRUE;
 }
 
-b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
+b8    _vc_priv_setup_instance(vc_ctx *ctx, vc_instance_desc *desc)
 {
     // Create instance
     VkApplicationInfo app_info =
@@ -285,7 +285,7 @@ b8    _vc_priv_setup_instance(vc_ctx *ctx, instance_desc *desc)
     return TRUE;
 }
 
-b8    _vc_priv_select_create_device(vc_ctx *ctx, physical_device_query query)
+b8    _vc_priv_select_create_device(vc_ctx *ctx, vc_physical_device_query query)
 {
     // Search suitable physical devices
     u32 physical_device_count = 0;
@@ -501,7 +501,7 @@ i32    _vc_priv_search_physical_device_queue(vc_ctx *ctx, vc_queue_type type, Vk
     return queue_id;
 }
 
-b8    _vc_priv_is_physical_device_suitable(vc_ctx *ctx, physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
+b8    _vc_priv_is_physical_device_suitable(vc_ctx *ctx, vc_physical_device_query query, VkPhysicalDevice phys_device, VkSurfaceKHR surface)
 {
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(phys_device, &props);

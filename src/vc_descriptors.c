@@ -8,7 +8,7 @@ b8                          _vc_priv_descriptor_set_layout_destroy(vc_ctx *ctx, 
     return TRUE;
 }
 
-vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc)
+vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, vc_descriptor_set_desc desc_set_desc)
 {
     VkDescriptorSetLayoutBinding *bindings = mem_allocate(sizeof(VkDescriptorSetLayoutBinding) * desc_set_desc.binding_count, MEMORY_TAG_RENDERER);
 
@@ -48,7 +48,7 @@ b8                   _vc_priv_descriptor_set_destroy(vc_ctx *ctx, vc_priv_man_de
     return TRUE;
 }
 
-vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc)
+vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, vc_descriptor_set_desc desc_set_desc)
 {
     // We can create set layout on the fly :
     //   If the user creates it before this call it is gonna be grabed by the cache
@@ -79,7 +79,7 @@ vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc d
 
         if (desc_set_desc.bindings[i].buffer_info)
         {
-            descriptor_binding_buffer *buffer_binding = desc_set_desc.bindings[i].buffer_info;
+            vc_descriptor_binding_buffer *buffer_binding = desc_set_desc.bindings[i].buffer_info;
             vc_priv_man_buffer *buf_info              = vc_handle_mgr_ptr(&ctx->handle_manager, buffer_binding->buffer);
 
             writes[i].pBufferInfo = &(VkDescriptorBufferInfo)
@@ -91,7 +91,7 @@ vc_descriptor_set    vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc d
         }
         if (desc_set_desc.bindings[i].image_info)
         {
-            descriptor_binding_image *image_binding = desc_set_desc.bindings[i].image_info;
+            vc_descriptor_binding_image *image_binding = desc_set_desc.bindings[i].image_info;
             writes[i].pImageInfo = &(VkDescriptorImageInfo)
             {
                 .sampler = image_binding->sampler ?

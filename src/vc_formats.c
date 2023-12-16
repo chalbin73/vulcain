@@ -5,7 +5,7 @@
 
 #include "vulcain.h"
 
-b8    vc_format_query_index(vc_ctx *ctx, format_query query, format_set candidates, u32 *index)
+b8    vc_format_query_index(vc_ctx *ctx, format_query query, vc_format_set candidates, u32 *index)
 {
     for(int i = 0; i < candidates.format_count; i++)
     {
@@ -27,7 +27,7 @@ b8    vc_format_query_index(vc_ctx *ctx, format_query query, format_set candidat
     return FALSE;
 }
 
-VkFormat    vc_format_query(vc_ctx *ctx, format_query query, format_set candidates)
+VkFormat    vc_format_query(vc_ctx *ctx, format_query query, vc_format_set candidates)
 {
     u32 index = 0;
     if( vc_format_query_index(ctx, query, candidates, &index) )

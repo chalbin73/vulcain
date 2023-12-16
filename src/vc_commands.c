@@ -82,7 +82,7 @@ void    vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer)
 /* ---------------- COMMANDS ---------------- */
 /* ---------------- Pipelines relative commands ---------------- */
 
-void    vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc)
+void    vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, vc_compute_dispatch_desc *desc)
 {
     vc_priv_man_command_buffer *buf = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
     vc_priv_man_compute_pipe *pipe  = vc_handle_mgr_ptr(&ctx->handle_manager, desc->pipe);
@@ -180,7 +180,7 @@ void    vc_command_bind_descriptor_sets(vc_ctx *ctx, vc_command_buffer command_b
         NULL
         );
 }
-void    vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, render_pass_begin_desc desc)
+void    vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, vc_render_pass_begin_desc desc)
 {
     vc_priv_man_command_buffer *buf      = vc_handle_mgr_ptr(&ctx->handle_manager, command_buffer);
     vc_priv_man_render_pass *render_pass = vc_handle_mgr_ptr(&ctx->handle_manager, desc.pass);

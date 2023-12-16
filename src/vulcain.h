@@ -42,7 +42,7 @@ typedef struct
     char                       **extensions;
     b8                           enable_windowing;
     vc_windowing_system_funcs    windowing_system;
-} instance_desc;
+} vc_instance_desc;
 
 /**
  * @brief Characteristics requested for the physical device slection
@@ -55,14 +55,14 @@ typedef struct
     b8                          request_transfer_queue;
     VkPhysicalDeviceType        allowed_types;
     VkPhysicalDeviceFeatures    requested_features;
-} physical_device_query;
+} vc_physical_device_query;
 
 
 typedef struct
 {
     u32         format_count;
     VkFormat   *formats;
-} format_set;
+} vc_format_set;
 
 typedef struct
 {
@@ -80,7 +80,7 @@ typedef struct
     u32    width;
     u32    height;
     u32    image_count;
-} swapchain_created_info;
+} vc_swapchain_created_info;
 
 // Forward declaration for callbacks
 typedef struct vc_ctx vc_ctx;
@@ -89,8 +89,8 @@ typedef struct vc_ctx vc_ctx;
  * @brief Callback function used when the swapchain is being recreated
  *
  */
-typedef void (*swapchain_recreated_callback_func)(vc_ctx *ctx, void *user_data, swapchain_created_info info);
-typedef void (*swapchain_destroyed_callback_func)(vc_ctx *ctx, void *user_data);
+typedef void (*vc_swapchain_recreated_callback_func)(vc_ctx *ctx, void *user_data, vc_swapchain_created_info info);
+typedef void (*vc_swapchain_destroyed_callback_func)(vc_ctx *ctx, void *user_data);
 
 /**
  * @brief Query for a swapchain configuration
@@ -100,26 +100,26 @@ typedef struct
 {
     // The query that formats must support in order to be selected
     format_query    query;
-} swapchain_configuration_query;
+} vc_swapchain_configuration_query;
 
 /**
  * @brief Description of a swapchain creation/recreation
  *
  */
-typedef struct swapchain_desc
+typedef struct vc_swapchain_desc
 {
 
     /** @brief Called when swapchain is created/recreated, used to create swapchain dependent objects */
-    swapchain_recreated_callback_func    recreation_callback;
+    vc_swapchain_recreated_callback_func    recreation_callback;
 
     /** @brief Called when swapchain is destroyed, used to free user allocated data (handle created during recreation callback are automatically freed) */
-    swapchain_destroyed_callback_func    destruction_callback;
-    void                                *callback_user_data;
+    vc_swapchain_destroyed_callback_func    destruction_callback;
+    void                                   *callback_user_data;
 
-    VkImageUsageFlags                    swapchain_images_usage;
+    VkImageUsageFlags                       swapchain_images_usage;
 
     // TODO: Add some format query stuff
-} swapchain_desc;
+} vc_swapchain_desc;
 
 /**
  * @brief A type of vulkan queue (based on what family they are created on)
@@ -170,7 +170,7 @@ typedef struct
 {
     u32              attachment_count;
     vc_image_view   *attachments;
-} render_attachments_set;
+} vc_render_attachments_set;
 
 
 /**
@@ -183,7 +183,7 @@ typedef struct
     u32              id;
     /** @brief The layout in which the attachment shall be transitioned to for this subpass */
     VkImageLayout    layout;
-} subpass_attachment_reference;
+} vc_subpass_attachment_reference;
 
 /**
  * @brief Gives the necessary parameters for an attachment when creating a render pass
@@ -204,7 +204,7 @@ typedef struct
 
     VkFormat                 attachment_format;
     VkSampleCountFlagBits    attachment_sample_counts;
-} render_pass_attachment_params;
+} vc_render_pass_attachment_params;
 
 /**
  * @brief Describes a single subpass
@@ -226,7 +226,7 @@ typedef struct
 
     VkAttachmentReference   *depth_stencil_attachment_ref;
 
-} subpass_desc;
+} vc_subpass_desc;
 
 /**
  * @brief Describes a single subpass dependency
@@ -251,7 +251,7 @@ typedef struct
 
     /** @brief Access to which memory writes (including src_accesses) must be made available to */
     VkAccessFlags              dst_access;
-} subpass_dependency_desc;
+} vc_subpass_dependency_desc;
 
 /**
  * @brief Describes the creation of a vulkan render pass
@@ -259,19 +259,19 @@ typedef struct
  */
 typedef struct
 {
-    u32                              attachment_count;
+    u32                                 attachment_count;
 
     /** @brief Parameters for each of the attachment */
-    render_pass_attachment_params   *attachment_desc;
+    vc_render_pass_attachment_params   *attachment_desc;
 
-    u32                              subpass_count;
+    u32                                 subpass_count;
     /** @brief Defines a subpass */
-    subpass_desc                    *subpasses_desc;
+    vc_subpass_desc                    *subpasses_desc;
 
-    u32                              subpass_dependency_count;
-    subpass_dependency_desc         *subpass_dependencies;
+    u32                                 subpass_dependency_count;
+    vc_subpass_dependency_desc         *subpass_dependencies;
 
-} render_pass_desc;
+} vc_render_pass_desc;
 
 /**
  * @brief Describes a framebuffer
@@ -280,12 +280,12 @@ typedef struct
 typedef struct
 {
     /** @brief The render pass with which the frambuffer is compatible */
-    vc_render_pass            render_pass;
+    vc_render_pass               render_pass;
 
     /** @brief The set of attachments is this frambuffer */
-    render_attachments_set    attachment_set;
-    u32                       layers; // Not sure about this one
-} framebuffer_desc;
+    vc_render_attachments_set    attachment_set;
+    u32                          layers; // Not sure about this one
+} vc_framebuffer_desc;
 
 typedef struct
 {
@@ -293,17 +293,17 @@ typedef struct
     VkFormat    format;
     /** @brief The number of byte between the start of the attribute and the start of the binding */
     u32         offset;
-} graphics_pipeline_in_attrib;
+} vc_graphics_pipeline_in_attrib;
 
 typedef struct
 {
     /** @brief The byte stride between consecutive elements within the buffer */
-    u32                            stride;
-    u32                            attribute_count;
-    graphics_pipeline_in_attrib   *attributes;
+    u32                               stride;
+    u32                               attribute_count;
+    vc_graphics_pipeline_in_attrib   *attributes;
 
-    VkVertexInputRate              input_rate;
-} graphics_pipeline_in_binding;
+    VkVertexInputRate                 input_rate;
+} vc_graphics_pipeline_in_binding;
 
 /**
  * @brief Describes the shaders used in a graphical pipeline
@@ -318,7 +318,7 @@ typedef struct
     u8           *fragment_code;
     u64           fragment_code_size;
     const char   *fragment_entry_point; // Null terminated
-} graphics_pipeline_code_desc;
+} vc_graphics_pipeline_code_desc;
 
 /**
  * @brief Describes the creation of a graphical pipeline
@@ -328,7 +328,7 @@ typedef struct
 {
 
     /** @brief The code of the programmable pipeline stages */
-    graphics_pipeline_code_desc            shader_code;
+    vc_graphics_pipeline_code_desc         shader_code;
 
     u32                                    set_layout_count;
     vc_descriptor_set_layout              *set_layouts;
@@ -340,7 +340,7 @@ typedef struct
     u32                                    subpass_index;
 
     u32                                    vertex_input_binding_count;
-    graphics_pipeline_in_binding          *vertex_input_bindings;
+    vc_graphics_pipeline_in_binding       *vertex_input_bindings;
 
     VkPrimitiveTopology                    topology;
 
@@ -382,7 +382,7 @@ typedef struct
     u32                                    dynamic_state_count;
     VkDynamicState                        *dynamic_states;
 
-} graphics_pipeline_desc;
+} vc_graphics_pipeline_desc;
 
 typedef struct
 {
@@ -392,7 +392,7 @@ typedef struct
     u32                  clear_value_count;
     VkClearValue        *clear_values;
     VkSubpassContents    subpass_contents;
-} render_pass_begin_desc;
+} vc_render_pass_begin_desc;
 
 /**
  * @brief Describes the creation of a vulkan compute pipeline
@@ -404,7 +404,7 @@ typedef struct
     u32                         shader_code_length;
     u32                         set_layout_count;
     vc_descriptor_set_layout   *set_layouts;
-} compute_pipe_desc;
+} vc_compute_pipe_desc;
 
 /**
  * @brief Description of a compute pipeline dispatch
@@ -416,7 +416,7 @@ typedef struct
     u32                groups_x;
     u32                groups_y;
     u32                groups_z;
-} compute_dispatch_desc;
+} vc_compute_dispatch_desc;
 
 
 /**
@@ -431,7 +431,7 @@ typedef struct
     b8                          share;
     vc_queue_flags              queues;
     VmaAllocationCreateFlags    allocation_flags;
-} buffer_alloc_desc;
+} vc_buffer_alloc_desc;
 
 /**
  * @brief If given as mip_levels when creating image, the number of mip levels is selected automaticaly
@@ -457,7 +457,7 @@ typedef struct
     b8                       share;  // To share the resource accross queues
     vc_queue_flags           queues;  // Only used is share is true
     VkImageLayout            layout;  // Layout transition is performed here if not undefined
-} image_create_desc;
+} vc_image_create_desc;
 
 /**
  * @brief Sampler creation description
@@ -479,7 +479,7 @@ typedef struct
     float                   max_lod;
     VkBorderColor           border_color;
     VkBool32                unnormalized_coordinates;
-} sampler_desc;
+} vc_sampler_desc;
 
 
 #define VC_COMPONENT_MAPPING_ID                        \
@@ -499,7 +499,7 @@ typedef struct
 
     VkImageSubresourceRange    subresource_range;
     VkComponentMapping         component_mapping;
-} image_view_desc;
+} vc_image_view_desc;
 
 /**
  * @brief Parameters for swapchain creation
@@ -510,7 +510,7 @@ typedef struct
     VkImageUsageFlags    image_usage;
     VkImageLayout        initial_images_layout;
 
-} swapchain_creation_desc;
+} vc_swapchain_creation_desc;
 
 /* ---------------- Descriptors ---------------- */
 
@@ -525,7 +525,7 @@ typedef struct
     // Useless if whole_buffer is true
     u64          offset;
     u64          range;
-} descriptor_binding_buffer;
+} vc_descriptor_binding_buffer;
 
 /**
  * @brief Info for an image binding
@@ -536,7 +536,7 @@ typedef struct
     vc_image_sampler    sampler;
     vc_image_view       image_view;
     VkImageLayout       layout;
-} descriptor_binding_image;
+} vc_descriptor_binding_image;
 
 /**
  * @brief Info for a shader binding
@@ -545,18 +545,18 @@ typedef struct
 typedef struct
 {
     /** The type of descriptor */
-    VkDescriptorType             descriptor_type;
-    uint32_t                     descriptor_count;
+    VkDescriptorType                descriptor_type;
+    uint32_t                        descriptor_count;
 
     /** The stage of the descriptor */
-    VkShaderStageFlags           stage_flags;
+    VkShaderStageFlags              stage_flags;
 
     /** If descriptor is a buffer, fill this info */
-    descriptor_binding_buffer   *buffer_info;
+    vc_descriptor_binding_buffer   *buffer_info;
 
     /** If descriptor is an image, fill this info */
-    descriptor_binding_image    *image_info;
-} descriptor_binding_desc;
+    vc_descriptor_binding_image    *image_info;
+} vc_descriptor_binding_desc;
 
 /**
  * @brief Describes a descriptor set/set layout
@@ -564,9 +564,9 @@ typedef struct
  */
 typedef struct
 {
-    u32                        binding_count;
-    descriptor_binding_desc   *bindings;
-} descriptor_set_desc;
+    u32                           binding_count;
+    vc_descriptor_binding_desc   *bindings;
+} vc_descriptor_set_desc;
 
 /**
  * @brief Allocator for descriptor sets (functions are private)
@@ -606,7 +606,7 @@ typedef struct
     VkFormat                    depth_format;
     u32                         image_count;
     VkSurfaceCapabilitiesKHR    capabilities;
-} swapchain_configuration;
+} vc_swapchain_configuration;
 
 
 // No typedef because of forward decl
@@ -637,21 +637,21 @@ struct vc_ctx
         VkQueue          queues[VC_QUEUE_TYPE_COUNT];
         VkCommandPool    pools[VC_QUEUE_TYPE_COUNT]; // TODO: Add support to create custom pools
     }
-                               queues;
+                                  queues;
 
     // Data relative to the swapchain parameters
-    swapchain_configuration    swapchain_conf;
+    vc_swapchain_configuration    swapchain_conf;
 
     // Contains objects tied to the swapchain
     struct swapchain
     {
-        b8                setup;
-        VkSwapchainKHR    vk_swapchain;
-        u32               swapchain_image_count;
-        swapchain_desc    desc;
+        b8                   setup;
+        VkSwapchainKHR       vk_swapchain;
+        u32                  swapchain_image_count;
+        vc_swapchain_desc    desc;
 
-        vc_image         *swapchain_image_hndls;
-        vc_image_view    *swapchain_image_view_hndls;
+        vc_image            *swapchain_image_hndls;
+        vc_image_view       *swapchain_image_view_hndls;
     }
     swapchain;
 };
@@ -710,14 +710,14 @@ char                  *vc_priv_VkDebugUtilsMessageSeverityFlagBitsEXT_to_prefix_
  * @param phys_device_query The requested characteristics for the physical device
  * @return b8 Success
  */
-b8                          vc_create_ctx(vc_ctx *ctx, instance_desc *desc, physical_device_query *phys_device_query);
+b8                            vc_create_ctx(vc_ctx *ctx, vc_instance_desc *desc, vc_physical_device_query *phys_device_query);
 
 /**
  * @brief Destroys the vulcain context and all subsequent vulkan objects
  *
  * @param ctx A pointer to the vulcain context
  */
-void                        vc_destroy_ctx(vc_ctx   *ctx);
+void                          vc_destroy_ctx(vc_ctx   *ctx);
 
 /* ---------------- Handles ---------------- */
 
@@ -727,7 +727,7 @@ void                        vc_destroy_ctx(vc_ctx   *ctx);
  * @param ctx
  * @param hndl Any handle
  */
-void                        vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
+void                          vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 
 /* ---------------- Queues ---------------- */
 
@@ -737,7 +737,7 @@ void                        vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
  * @param ctx
  * @param type The queue family to wait on
  */
-void                        vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type);
+void                          vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type);
 
 /* ---------------- Pipelines ---------------- */
 
@@ -748,7 +748,7 @@ void                        vc_queue_wait_idle(vc_ctx *ctx, vc_queue_type type);
  * @param desc The description of the pipeline
  * @return vc_compute_pipe The pipeline handle
  */
-vc_compute_pipe             vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc);
+vc_compute_pipe               vc_compute_pipe_create(vc_ctx *ctx, vc_compute_pipe_desc *desc);
 
 /* ---------------- Commands ---------------- */
 
@@ -760,7 +760,7 @@ vc_compute_pipe             vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_des
  * @param level The command buffer level
  * @return vc_command_buffer A handle to the command buffer
  */
-vc_command_buffer           vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level);
+vc_command_buffer             vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_type queue, VkCommandBufferLevel level);
 
 /**
  * @brief Submits a command buffer
@@ -770,7 +770,7 @@ vc_command_buffer           vc_command_buffer_main_create(vc_ctx *ctx, vc_queue_
  * @param wait_on_semaphore The semaphore to wait on before submitting
  * @param wait_on_stages The stages on which to wait upon semaphore signaling
  */
-void                        vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_on_stages);
+void                          vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer command_buffer, vc_semaphore wait_on_semaphore, VkPipelineStageFlags *wait_on_stages);
 
 /**
  * @brief Begins a command buffer
@@ -778,7 +778,7 @@ void                        vc_command_buffer_submit(vc_ctx *ctx, vc_command_buf
  * @param ctx
  * @param command_buffer The command buffer to begin
  */
-void                        vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer);
+void                          vc_command_buffer_begin(vc_ctx *ctx, vc_command_buffer command_buffer);
 
 /**
  * @brief Ends a command buffer
@@ -786,7 +786,7 @@ void                        vc_command_buffer_begin(vc_ctx *ctx, vc_command_buff
  * @param ctx
  * @param command_buffer The command buffer to end
  */
-void                        vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
+void                          vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer command_buffer);
 
 /**
  * @brief Resets a command buffer
@@ -794,7 +794,7 @@ void                        vc_command_buffer_end(vc_ctx *ctx, vc_command_buffer
  * @param ctx
  * @param command_buffer The command buffer to reset
  */
-void                        vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
+void                          vc_command_buffer_reset(vc_ctx *ctx, vc_command_buffer command_buffer);
 
 /**
  * @brief Commands a compute pipeline dispatch
@@ -803,7 +803,7 @@ void                        vc_command_buffer_reset(vc_ctx *ctx, vc_command_buff
  * @param command_buffer The command buffer
  * @param desc The parameters of the dispatch
  */
-void                        vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, compute_dispatch_desc *desc);
+void                          vc_command_compute_pipeline(vc_ctx *ctx, vc_command_buffer command_buffer, vc_compute_dispatch_desc *desc);
 
 /**
  * @brief Commands the binding a descriptor set
@@ -814,7 +814,7 @@ void                        vc_command_compute_pipeline(vc_ctx *ctx, vc_command_
  * @param descriptor_set_index The index to which the descriptor set is to be bound
  * @param desc_set The descriptor set to bind
  */
-void                        vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_index, vc_descriptor_set desc_set);
+void                          vc_command_bind_descriptor_set(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_index, vc_descriptor_set desc_set);
 
 /**
  * @brief Commands the binding of a set of descriptor sets
@@ -826,7 +826,7 @@ void                        vc_command_bind_descriptor_set(vc_ctx *ctx, vc_comma
  * @parma The number of sets to bind
  * @param desc_sets The descriptor sets to bind
  */
-void                        vc_command_bind_descriptor_sets(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_start_index, u32 descriptor_set_count, vc_descriptor_set *desc_sets);
+void                          vc_command_bind_descriptor_sets(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipeline, u32 descriptor_set_start_index, u32 descriptor_set_count, vc_descriptor_set *desc_sets);
 
 /**
  * @brief Copies one image to another
@@ -837,7 +837,7 @@ void                        vc_command_bind_descriptor_sets(vc_ctx *ctx, vc_comm
  * @param dst The destination inmage
  * @note This copy is automatic, and different images sizes may result in validation layers complaining
  */
-void                        vc_command_simple_image_copy(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image src, vc_image dst);
+void                          vc_command_simple_image_copy(vc_ctx *ctx, vc_command_buffer command_buffer, vc_image src, vc_image dst);
 
 /**
  * @brief Begins a render pass object
@@ -846,7 +846,7 @@ void                        vc_command_simple_image_copy(vc_ctx *ctx, vc_command
  * @param command_buffer
  * @param desc
  */
-void                        vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, render_pass_begin_desc desc);
+void                          vc_command_render_pass_begin(vc_ctx *ctx, vc_command_buffer command_buffer, vc_render_pass_begin_desc desc);
 
 /**
  * @brief Ends a render pass object (that was previously begun)
@@ -854,7 +854,7 @@ void                        vc_command_render_pass_begin(vc_ctx *ctx, vc_command
  * @param ctx
  * @param command_buffer
  */
-void                        vc_command_render_pass_end(vc_ctx *ctx, vc_command_buffer command_buffer);
+void                          vc_command_render_pass_end(vc_ctx *ctx, vc_command_buffer command_buffer);
 
 /**
  * @brief Binds a pipline (any type)
@@ -863,7 +863,7 @@ void                        vc_command_render_pass_end(vc_ctx *ctx, vc_command_b
  * @param command_buffer
  * @param pipe The pipeline handle, either compute or graphics
  */
-void                        vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipe);
+void                          vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buffer command_buffer, vc_handle pipe);
 
 /**
  * @brief Dynamically sets a set of viewports (set to dynamic during pipeline creation)
@@ -873,7 +873,7 @@ void                        vc_command_pipeline_bind(vc_ctx *ctx, vc_command_buf
  * @param viewport_count The number of viewports
  * @param viewports The viewports
  */
-void                        vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_buffer command_buffer, u32 viewport_count, VkViewport *viewports);
+void                          vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_buffer command_buffer, u32 viewport_count, VkViewport *viewports);
 
 /**
  * @brief Dynamically sets a set of scissors (set to dynamic during pipeline creation)
@@ -883,7 +883,7 @@ void                        vc_command_dyn_set_viewport(vc_ctx *ctx, vc_command_
  * @param viewport_count The number of scissors
  * @param viewports The scissors
  */
-void                        vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_buffer command_buffer, u32 scissor_count, VkRect2D *scissors);
+void                          vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_buffer command_buffer, u32 scissor_count, VkRect2D *scissors);
 
 /**
  * @brief Send a draw call (vkCmdDraw)
@@ -895,7 +895,7 @@ void                        vc_command_dyn_set_scissors(vc_ctx *ctx, vc_command_
  * @param first_vertex The index of the first vertex
  * @param first_instance The index of the first instance
  */
-void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
+void                          vc_command_draw(vc_ctx *ctx, vc_command_buffer command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
 
 
 /**
@@ -909,7 +909,7 @@ void                        vc_command_draw(vc_ctx *ctx, vc_command_buffer comma
  * @param vertex_offset
  * @param first_instance
  */
-void                        vc_command_draw_indexed(vc_ctx *ctx, vc_command_buffer command_buffer, u32 index_count, u32 instance_count, u32 first_index, int32_t vertex_offset, u32 first_instance);
+void                          vc_command_draw_indexed(vc_ctx *ctx, vc_command_buffer command_buffer, u32 index_count, u32 instance_count, u32 first_index, int32_t vertex_offset, u32 first_instance);
 
 /**
  * @brief Copies a buffer into another
@@ -921,7 +921,7 @@ void                        vc_command_draw_indexed(vc_ctx *ctx, vc_command_buff
  * @param region_count The number of buffer regions to copy
  * @param regions The regions to copy
  */
-void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer src, vc_buffer dst, u32 region_count, VkBufferCopy *regions);
+void                          vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffer cmd_buf, vc_buffer src, vc_buffer dst, u32 region_count, VkBufferCopy *regions);
 
 
 /**
@@ -933,7 +933,7 @@ void                        vc_command_buffer_copy(vc_ctx *ctx, vc_command_buffe
  * @param binding The binding index
  * @param offset The offset in the vertex buffer to bind
  */
-void                        vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u32 binding, u64 offset);
+void                          vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u32 binding, u64 offset);
 
 /**
  * @brief Bind a index buffer for a pipeline
@@ -944,7 +944,7 @@ void                        vc_command_bind_vertex_buffer(vc_ctx *ctx, vc_comman
  * @param offset The offset in the buffer to bind
  * @param index_type The type of index in the buffer
  */
-void                        vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u64 offset, VkIndexType index_type);
+void                          vc_command_bind_index_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer buffer, u64 offset, VkIndexType index_type);
 
 /**
  * @brief Submits a copy buffer to image command
@@ -957,7 +957,7 @@ void                        vc_command_bind_index_buffer(vc_ctx *ctx, vc_command
  * @param region_count The number of regions to copy
  * @param regions An array of regions to copy
  */
-void                        vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer src, vc_image dst, VkImageLayout dst_layout, u32 region_count, VkBufferImageCopy *regions);
+void                          vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_command_buffer command_buffer, vc_buffer src, vc_image dst, VkImageLayout dst_layout, u32 region_count, VkBufferImageCopy *regions);
 
 /**
  * @brief Executes a set of secondary buffers within a primary buffer
@@ -967,7 +967,7 @@ void                        vc_command_copy_buffer_to_image(vc_ctx *ctx, vc_comm
  * @param command_buffer_count The number of secondary buffers
  * @param secondary_buffers The secondary buffers
  */
-void                        vc_command_execute_secondary_buffers(vc_ctx *ctx, vc_command_buffer command_buffer, u32 command_buffer_count, vc_command_buffer *secondary_buffers);
+void                          vc_command_execute_secondary_buffers(vc_ctx *ctx, vc_command_buffer command_buffer, u32 command_buffer_count, vc_command_buffer *secondary_buffers);
 
 /**
  * @brief Executes a set of secondary buffers within a primary buffer
@@ -976,7 +976,7 @@ void                        vc_command_execute_secondary_buffers(vc_ctx *ctx, vc
  * @param command_buffer
  * @param secondary_buffer The secondary buffer
  */
-void                        vc_command_execute_secondary_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_command_buffer secondary_buffer);
+void                          vc_command_execute_secondary_buffer(vc_ctx *ctx, vc_command_buffer command_buffer, vc_command_buffer secondary_buffer);
 
 /* ---------------- Synchronisation ---------------- */
 
@@ -986,7 +986,7 @@ void                        vc_command_execute_secondary_buffer(vc_ctx *ctx, vc_
  * @param ctx
  * @return vc_semaphore The semaphore
  */
-vc_semaphore                vc_semaphore_create(vc_ctx   *ctx);
+vc_semaphore                  vc_semaphore_create(vc_ctx   *ctx);
 
 /* ---------------- Swapchain ---------------- */
 
@@ -997,7 +997,7 @@ vc_semaphore                vc_semaphore_create(vc_ctx   *ctx);
  * @param desc The swapchain description
  * @returns Wether or not the setup was successful based on the given query, swapchain creation is unspecified if this function returns false
  */
-b8                          vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query);
+b8                            vc_swapchain_setup(vc_ctx *ctx, vc_swapchain_configuration_query query);
 
 /**
  * @brief Returns the retrieved configuration after setting up the swapchain
@@ -1005,7 +1005,7 @@ b8                          vc_swapchain_setup(vc_ctx *ctx, swapchain_configurat
  * @param ctx
  * @return swapchain_configuration
  */
-swapchain_configuration     vc_swapchain_configuration_get(vc_ctx   *ctx);
+vc_swapchain_configuration    vc_swapchain_configuration_get(vc_ctx   *ctx);
 
 /**
  * @brief Actually creates a swapchain, that can be used later. This function should usally be called once, the destruction/creation is then handled through present/acquire/recreation operations
@@ -1013,7 +1013,7 @@ swapchain_configuration     vc_swapchain_configuration_get(vc_ctx   *ctx);
  * @param ctx
  * @param desc
  */
-void                        vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc);
+void                          vc_swapchain_commit(vc_ctx *ctx, vc_swapchain_desc desc);
 
 /**
  * @brief Acquires an image on the swapchains
@@ -1023,7 +1023,7 @@ void                        vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc
  * @param acquired_semaphore The semaphore to signal upon acquire of the image
  * @returns b8 FALSE if a swapchain recreation was made, thus the frame need to be cancelled, and restarted (image_id would be null is this case)
  */
-b8                          vc_swapchain_acquire_image(vc_ctx *ctx, vc_swp_img_id *image_id, vc_semaphore acquired_semaphore);
+b8                            vc_swapchain_acquire_image(vc_ctx *ctx, vc_swp_img_id *image_id, vc_semaphore acquired_semaphore);
 
 /**
  * @brief Presents an image on the screen
@@ -1033,7 +1033,7 @@ b8                          vc_swapchain_acquire_image(vc_ctx *ctx, vc_swp_img_i
  * @param wait_sem The semaphore on which to wait before presenting the image
  * @returns b8 FALSE if a swapchain recreation was made, thus the frame need to be cancelled, and restarted
  */
-b8                          vc_swapchain_present_image(vc_ctx *ctx, u32 image_id, vc_semaphore wait_sem);
+b8                            vc_swapchain_present_image(vc_ctx *ctx, u32 image_id, vc_semaphore wait_sem);
 
 /**
  * @brief Gets a pointer to an array of image handles to the swapchain images (can be indexed using @c{vc_swp_img_id})
@@ -1041,7 +1041,7 @@ b8                          vc_swapchain_present_image(vc_ctx *ctx, u32 image_id
  * @param ctx
  * @return vc_image* A pointer to an array of images
  */
-vc_image                   *vc_swapchain_get_image_hndls(vc_ctx   *ctx);
+vc_image                     *vc_swapchain_get_image_hndls(vc_ctx   *ctx);
 
 /**
  * @brief Gets a pointer to an array of image view handles to the swapchain image views (can be indexed using @c{vc_swp_img_id})
@@ -1049,7 +1049,7 @@ vc_image                   *vc_swapchain_get_image_hndls(vc_ctx   *ctx);
  * @param ctx
  * @return vc_image* A pointer to an array of image views
  */
-vc_image_view              *vc_swapchain_get_image_view_hndls(vc_ctx   *ctx);
+vc_image_view                *vc_swapchain_get_image_view_hndls(vc_ctx   *ctx);
 
 /**
  * @brief The number of images in teh swapchain
@@ -1057,14 +1057,14 @@ vc_image_view              *vc_swapchain_get_image_view_hndls(vc_ctx   *ctx);
  * @param ctx
  * @return u32 The number of images in the swapchain
  */
-u32                         vc_swapchain_image_count(vc_ctx   *ctx);
+u32                           vc_swapchain_image_count(vc_ctx   *ctx);
 
 /**
  * @brief Forces a complete destruction/creation cycle of the pipline, thus calling the callback. If this is called during a frame, then the frame most likely needs to be cancelled
  *
  * @param ctx
  */
-void                        vc_swapchain_force_recreation(vc_ctx   *ctx);
+void                          vc_swapchain_force_recreation(vc_ctx   *ctx);
 
 /* ---------------- Descriptors ---------------- */
 
@@ -1076,7 +1076,7 @@ void                        vc_swapchain_force_recreation(vc_ctx   *ctx);
  * @return vc_descriptor_set_layout The set layout
  * @note @c{buffer_info} and @c{image_info} can be NULL during set layout creation
  */
-vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc);
+vc_descriptor_set_layout      vc_descriptor_set_layout_create(vc_ctx *ctx, vc_descriptor_set_desc desc_set_desc);
 
 /**
  * @brief Creates a descriptor set
@@ -1087,7 +1087,7 @@ vc_descriptor_set_layout    vc_descriptor_set_layout_create(vc_ctx *ctx, descrip
  *
  * @note descriptor set layouts are handled automatically
  */
-vc_descriptor_set           vc_descriptor_set_create(vc_ctx *ctx, descriptor_set_desc desc_set_desc);
+vc_descriptor_set             vc_descriptor_set_create(vc_ctx *ctx, vc_descriptor_set_desc desc_set_desc);
 
 /* ---------------- Pipelines ---------------- */
 
@@ -1108,24 +1108,24 @@ vc_descriptor_set           vc_descriptor_set_create(vc_ctx *ctx, descriptor_set
  * @param subresource_range The subresource range on which to apply the memory dependency
  * @note If @p src_queue and @p dst_queue are #VC_QUEUE_IGNORED no queue ownership transfer is made
  */
-void                        vc_command_image_pipe_barrier(vc_ctx                    *ctx,
-                                                          vc_command_buffer          command_buffer,
-                                                          vc_image                   image,
+void                          vc_command_image_pipe_barrier(vc_ctx                    *ctx,
+                                                            vc_command_buffer          command_buffer,
+                                                            vc_image                   image,
 
-                                                          VkImageLayout              src_layout,
-                                                          VkImageLayout              dst_layout,
+                                                            VkImageLayout              src_layout,
+                                                            VkImageLayout              dst_layout,
 
-                                                          VkPipelineStageFlags       from,
-                                                          VkPipelineStageFlags       to,
+                                                            VkPipelineStageFlags       from,
+                                                            VkPipelineStageFlags       to,
 
-                                                          VkAccessFlags              src_access,
-                                                          VkAccessFlags              dst_access,
+                                                            VkAccessFlags              src_access,
+                                                            VkAccessFlags              dst_access,
 
-                                                          vc_queue_type              src_queue,
-                                                          vc_queue_type              dst_queue,
+                                                            vc_queue_type              src_queue,
+                                                            vc_queue_type              dst_queue,
 
-                                                          VkImageSubresourceRange    subresource_range
-                                                          );
+                                                            VkImageSubresourceRange    subresource_range
+                                                            );
 
 void                vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout src_layout, VkImageLayout dst_layout, vc_queue_type queue, VkImageAspectFlags aspect);
 
@@ -1138,7 +1138,7 @@ void                vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkIm
  * @param alloc_desc The allocation parameters
  * @return vc_buffer A handle to the buffer
  */
-vc_buffer           vc_buffer_allocate(vc_ctx *ctx, buffer_alloc_desc alloc_desc);
+vc_buffer           vc_buffer_allocate(vc_ctx *ctx, vc_buffer_alloc_desc alloc_desc);
 
 /**
  * @brief Makes a coherent write from CPU to buffer, this write is blocking on the CPU, which makes it not suitable for performant operations.
@@ -1172,7 +1172,7 @@ void                vc_buffer_write_to(vc_ctx *ctx, vc_buffer dest, u64 offset, 
  * @param desc Descripion of the image
  * @return vc_image A handle to the imaage
  */
-vc_image            vc_image_allocate(vc_ctx *ctx, image_create_desc desc);
+vc_image            vc_image_allocate(vc_ctx *ctx, vc_image_create_desc desc);
 
 /**
  * @brief Creates the full image view for an image, that is, the image view viewing the full subRessources of the image (the one most commonly used)
@@ -1190,7 +1190,7 @@ void                vc_image_create_full_image_view(vc_ctx *ctx, vc_image img);
  * @param desc
  * @return
  */
-vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc);
+vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, vc_sampler_desc desc);
 
 /**
  * @brief Creates an image view
@@ -1200,7 +1200,7 @@ vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc);
  * @param desc
  * @return
  */
-vc_image_view       vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc);
+vc_image_view       vc_image_view_create(vc_ctx *ctx, vc_image image, vc_image_view_desc desc);
 
 /**
  * @brief Fills an image from a buffer
@@ -1223,7 +1223,7 @@ void                vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buff
  * @param desc
  * @return vc_render_pass
  */
-vc_render_pass      vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
+vc_render_pass      vc_render_pass_create(vc_ctx *ctx, vc_render_pass_desc desc);
 
 /* ---------------- Framebuffer ---------------- */
 
@@ -1234,7 +1234,7 @@ vc_render_pass      vc_render_pass_create(vc_ctx *ctx, render_pass_desc desc);
  * @param desc
  * @return vc_framebuffer
  */
-vc_framebuffer      vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc);
+vc_framebuffer      vc_framebuffer_create(vc_ctx *ctx, vc_framebuffer_desc desc);
 
 /* ---------------- Graphics Pipeline ---------------- */
 
@@ -1245,7 +1245,7 @@ vc_framebuffer      vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc);
  * @param desc
  * @return vc_graphics_pipe
  */
-vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc desc);
+vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, vc_graphics_pipeline_desc desc);
 
 /* ---------------- Utils ---------------- */
 
@@ -1276,7 +1276,7 @@ u32                 vc_u32_flags_set_bits(u32    flag);
  * @param index The index in the format_set of the first valid format
  * @return Weher or not a format was found
  */
-b8                  vc_format_query_index(vc_ctx *ctx, format_query query, format_set candidates, u32 *index);
+b8                  vc_format_query_index(vc_ctx *ctx, format_query query, vc_format_set candidates, u32 *index);
 
 /**
  * @brief Queries a format based on requirements
@@ -1286,5 +1286,5 @@ b8                  vc_format_query_index(vc_ctx *ctx, format_query query, forma
  * @param candidates Candidates to check
  * @return The first found format or an invalid format (NULL)
  */
-VkFormat            vc_format_query(vc_ctx *ctx, format_query query, format_set candidates);
+VkFormat            vc_format_query(vc_ctx *ctx, format_query query, vc_format_set candidates);
 

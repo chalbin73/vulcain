@@ -15,7 +15,7 @@ b8                 _vc_priv_graphics_pipe_destroy(vc_ctx *ctx, vc_priv_man_graph
     return TRUE;
 }
 
-vc_compute_pipe    vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
+vc_compute_pipe    vc_compute_pipe_create(vc_ctx *ctx, vc_compute_pipe_desc *desc)
 {
     VkShaderModuleCreateInfo mod_ci =
     {
@@ -77,7 +77,7 @@ vc_compute_pipe    vc_compute_pipe_create(vc_ctx *ctx, compute_pipe_desc *desc)
 
 }
 
-vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, graphics_pipeline_desc desc)
+vc_graphics_pipe    vc_graphics_pipe_create(vc_ctx *ctx, vc_graphics_pipeline_desc desc)
 {
     VkShaderModuleCreateInfo vert_ci =
     {

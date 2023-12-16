@@ -7,7 +7,7 @@ b8                _vc_priv_framebuffer_destroy(vc_ctx *ctx, vc_priv_man_framebuf
     return TRUE;
 }
 
-vc_framebuffer    vc_framebuffer_create(vc_ctx *ctx, framebuffer_desc desc)
+vc_framebuffer    vc_framebuffer_create(vc_ctx *ctx, vc_framebuffer_desc desc)
 {
     vc_priv_man_render_pass *pass = vc_handle_mgr_ptr(&ctx->handle_manager, desc.render_pass);
 

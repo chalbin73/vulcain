@@ -8,7 +8,7 @@
 // Configuration selection functions
 
 // FORMAT SELECTION
-b8    _vc_priv_swapchain_select_format(vc_ctx *ctx, swapchain_configuration_query query)
+b8    _vc_priv_swapchain_select_format(vc_ctx *ctx, vc_swapchain_configuration_query query)
 {
     VkSurfaceFormatKHR *formats;
     u32 format_count = 0;
@@ -29,7 +29,7 @@ b8    _vc_priv_swapchain_select_format(vc_ctx *ctx, swapchain_configuration_quer
     }
 
     // Select formats based on query
-    format_set format_candidates =
+    vc_format_set format_candidates =
     {
         0
     };
@@ -67,7 +67,7 @@ b8    _vc_priv_swapchain_select_format(vc_ctx *ctx, swapchain_configuration_quer
 }
 
 // PRESENT MODE SELECTION
-b8    _vc_priv_swapchain_select_present_mode(vc_ctx *ctx, swapchain_configuration_query query)
+b8    _vc_priv_swapchain_select_present_mode(vc_ctx *ctx, vc_swapchain_configuration_query query)
 {
     u32 present_mode_count          = 0;
     VkPresentModeKHR *present_modes = NULL;
@@ -89,7 +89,7 @@ b8    _vc_priv_swapchain_select_present_mode(vc_ctx *ctx, swapchain_configuratio
     return TRUE;
 }
 
-b8    _vc_priv_swapchain_select_image_count(vc_ctx *ctx, swapchain_configuration_query query)
+b8    _vc_priv_swapchain_select_image_count(vc_ctx *ctx, vc_swapchain_configuration_query query)
 {
     VkSurfaceCapabilitiesKHR capa;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->vk_selected_physical_device, ctx->vk_window_surface, &capa);
@@ -106,7 +106,7 @@ b8    _vc_priv_swapchain_select_image_count(vc_ctx *ctx, swapchain_configuration
     return TRUE;
 }
 
-b8    _vc_priv_swapchain_select_depth_format(vc_ctx *ctx, swapchain_configuration_query query)
+b8    _vc_priv_swapchain_select_depth_format(vc_ctx *ctx, vc_swapchain_configuration_query query)
 {
     u32 candidates_count         = 3;
     VkFormat depth_candidates[3] =
@@ -141,7 +141,7 @@ b8    _vc_priv_swapchain_select_depth_format(vc_ctx *ctx, swapchain_configuratio
     return TRUE;
 }
 
-b8    vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query)
+b8    vc_swapchain_setup(vc_ctx *ctx, vc_swapchain_configuration_query query)
 {
     if(!ctx->use_windowing)
     {
@@ -167,7 +167,7 @@ b8    vc_swapchain_setup(vc_ctx *ctx, swapchain_configuration_query query)
     return TRUE;
 }
 
-swapchain_configuration    vc_swapchain_configuration_get(vc_ctx   *ctx)
+vc_swapchain_configuration    vc_swapchain_configuration_get(vc_ctx   *ctx)
 {
     return ctx->swapchain_conf;
 }

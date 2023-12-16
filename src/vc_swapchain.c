@@ -25,7 +25,7 @@ void    _vc_priv_swapchain_get_optimal_extent(vc_ctx *ctx, VkExtent2D *swp_exten
 }
 
 // Actual swapchain creation
-void    _vc_priv_swapchain_create(vc_ctx *ctx, swapchain_desc desc, VkExtent2D extent)
+void    _vc_priv_swapchain_create(vc_ctx *ctx, vc_swapchain_desc desc, VkExtent2D extent)
 {
     VkSwapchainCreateInfoKHR sc_ci =
     {
@@ -65,7 +65,7 @@ void    _vc_priv_swapchain_create(vc_ctx *ctx, swapchain_desc desc, VkExtent2D e
     vc_command_buffer cmd_buf = vc_command_buffer_main_create(ctx, VC_QUEUE_MAIN, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     vc_command_buffer_begin(ctx, cmd_buf);
 
-    image_view_desc views_desc =
+    vc_image_view_desc views_desc =
     {
         .subresource_range.baseArrayLayer = 0,
         .subresource_range.baseMipLevel   = 0,
@@ -138,7 +138,7 @@ void    _vc_priv_swapchain_create(vc_ctx *ctx, swapchain_desc desc, VkExtent2D e
     mem_free(swapchain_images);
 }
 
-void    vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc)
+void    vc_swapchain_commit(vc_ctx *ctx, vc_swapchain_desc desc)
 {
     VkExtent2D new_extent;
     _vc_priv_swapchain_get_optimal_extent(ctx, &new_extent);
@@ -154,7 +154,7 @@ void    vc_swapchain_commit(vc_ctx *ctx, swapchain_desc desc)
         desc.recreation_callback(
             ctx,
             desc.callback_user_data,
-            (swapchain_created_info) { .width = new_extent.width, .height = new_extent.height, .image_count = ctx->swapchain.swapchain_image_count }
+            (vc_swapchain_created_info) { .width = new_extent.width, .height = new_extent.height, .image_count = ctx->swapchain.swapchain_image_count }
             );
     }
     vc_handle_mgr_set_current_marker(&ctx->handle_manager, VC_HANDLE_MARKER_DEFAULT);

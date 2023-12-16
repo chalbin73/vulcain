@@ -71,16 +71,25 @@ void    vc_command_simple_image_copy(vc_ctx              *ctx,
             .layerCount     = dst_img->image_desc.layer_count,
             .mipLevel       = 0, // TODO: Make this configurable (maybe mutliple levels at once)
         },
-        .srcOffset      = { 0 },
-        .dstSubresource =
+        .srcOffset          =
+        {
+            0
+        },
+        .dstSubresource     =
         {
             .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, // TODO: Make this configurable
             .baseArrayLayer = 0,
             .layerCount     = dst_img->image_desc.layer_count,
             .mipLevel       = 0, // TODO: Make this configurable (maybe mutliple levels at once)
         },
-        .dstOffset = { 0 },
-        .extent    = { src_img->image_desc.width,    src_img->image_desc.height,src_img->image_desc.depth },
+        .dstOffset          =
+        {
+            0
+        },
+        .extent             =
+        {
+            src_img->image_desc.width, src_img->image_desc.height, src_img->image_desc.depth
+        },
     };
     vkCmdCopyImage(cmd_buf->command_buffer, src_img->image, src_img->image_desc.layout, dst_img->image, dst_img->image_desc.layout, 1, &copy);
 }
@@ -122,7 +131,7 @@ void    vc_image_transition_layout(vc_ctx *ctx, vc_image image, VkImageLayout sr
     vc_handle_destroy(ctx, buf);
 }
 
-vc_image    vc_image_allocate(vc_ctx *ctx, image_create_desc desc)
+vc_image    vc_image_allocate(vc_ctx *ctx, vc_image_create_desc desc)
 {
     VkImageCreateInfo image_ci =
     {
@@ -219,7 +228,7 @@ b8               _vc_priv_image_view_destroy(vc_ctx *ctx, vc_priv_man_image_view
     return TRUE;
 }
 
-vc_image_view    vc_image_view_create(vc_ctx *ctx, vc_image image, image_view_desc desc)
+vc_image_view    vc_image_view_create(vc_ctx *ctx, vc_image image, vc_image_view_desc desc)
 {
     vc_priv_man_image *img        = vc_handle_mgr_ptr(&ctx->handle_manager, image);
     VkImageViewCreateInfo view_ci =
@@ -252,7 +261,7 @@ b8                  _vc_priv_image_sampler_destroy(vc_ctx *ctx, vc_priv_man_imag
     return TRUE;
 }
 
-vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, sampler_desc desc)
+vc_image_sampler    vc_image_sampler_create(vc_ctx *ctx, vc_sampler_desc desc)
 {
     VkSamplerCreateInfo sampler_ci =
     {
@@ -314,8 +323,12 @@ void    vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkIm
 
     VkBufferImageCopy region =
     {
-        .imageExtent       = (VkExtent3D){ dst_img->image_desc.width, dst_img->image_desc.height, dst_img->image_desc.depth },
-        .imageOffset       = (VkOffset3D){ 0 },
+        .imageExtent        = (VkExtent3D){
+            dst_img->image_desc.width, dst_img->image_desc.height, dst_img->image_desc.depth
+        },
+        .imageOffset        = (VkOffset3D){
+            0
+        },
         .bufferOffset      = 0,
         .bufferRowLength   = 0,
         .bufferImageHeight = 0,
@@ -356,3 +369,4 @@ void    vc_image_fill_from_buffer(vc_ctx *ctx, vc_image img, vc_buffer src, VkIm
 
     vc_queue_wait_idle(ctx, queue);
 }
+
