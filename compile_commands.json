@@ -1,1 +1,156 @@
-build/compile_commands/debug.json
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/darray.o",
+      "../src/base/data_structures/darray.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/data_structures/darray.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/darray.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/fio.o",
+      "../src/base/fio.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/fio.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/fio.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/handle_allocator.o",
+      "../src/base/allocators/handle_allocator.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/allocators/handle_allocator.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/handle_allocator.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/hashmap.o",
+      "../src/base/data_structures/hashmap.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/data_structures/hashmap.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/hashmap.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/logging.o",
+      "../src/base/logging.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/logging.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/logging.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/memory.o",
+      "../src/base/memory.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/memory.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/memory.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/platform_gnulinux.o",
+      "../src/base/platform/platform_gnulinux.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/platform/platform_gnulinux.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/platform_gnulinux.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/pool_allocator.o",
+      "../src/base/allocators/pool_allocator.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/allocators/pool_allocator.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/pool_allocator.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/str.o",
+      "../src/base/data_structures/str.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/data_structures/str.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/str.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/tight_b8.o",
+      "../src/base/data_structures/tight_b8.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/base/data_structures/tight_b8.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/tight_b8.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Wall",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_ctx.o",
+      "../src/vc_ctx.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_ctx.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_ctx.o"
+  }
+]
