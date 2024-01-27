@@ -9,25 +9,23 @@
 
 #include "femtolog.h"
 
-#define VC_VULCAIN_SUBSYS_NAME "vulcain"
-
 #define vc_trace(fmt, ...) \
-        fl_log(TRACE, VC_VULCAIN_SUBSYS_NAME "::" VC_CURRENT_SUBSYS_NAME, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
+        fl_log(TRACE, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
 #define vc_debug(fmt, ...) \
-        fl_log(DEBUG, VC_VULCAIN_SUBSYS_NAME "::" VC_CURRENT_SUBSYS_NAME, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
+        fl_log(DEBUG, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
 #define vc_info(fmt, ...) \
-        fl_log(INFO, VC_VULCAIN_SUBSYS_NAME "::" VC_CURRENT_SUBSYS_NAME, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
+        fl_log(INFO, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
 #define vc_warn(fmt, ...) \
-        fl_log(WARN, VC_VULCAIN_SUBSYS_NAME "::" VC_CURRENT_SUBSYS_NAME, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
+        fl_log(WARN, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
 #define vc_error(fmt, ...) \
-        fl_log(ERROR, VC_VULCAIN_SUBSYS_NAME "::" VC_CURRENT_SUBSYS_NAME, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
+        fl_log(ERROR, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
 #define vc_fatal(fmt, ...) \
-        fl_log(FATAL, VC_VULCAIN_SUBSYS_NAME "::" VC_CURRENT_SUBSYS_NAME, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
+        fl_log(FATAL, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
 
 // Welcome to vulcain
@@ -44,6 +42,18 @@ typedef struct
     VkDevice                    current_device;
 } vc_ctx;
 
+typedef struct
+{
+    u32         format_count;
+    VkFormat   *formats;
+} vc_format_set;
+
+typedef struct
+{
+    VkFormatFeatureFlags    required_linear_tiling_features;
+    VkFormatFeatureFlags    required_optimal_tiling_features;
+    VkFormatFeatureFlags    required_buffer_features;
+} vc_format_query;
 
 bool    vc_ctx_create(vc_ctx                *ctx,
                       VkApplicationInfo      app_info,

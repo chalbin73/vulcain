@@ -8,9 +8,6 @@
 #define FEMTOLOG_IMPLEMENTATION
 #include "femtolog.h"
 
-#undef VC_CURRENT_SUBSYS_NAME
-#define VC_CURRENT_SUBSYS_NAME "ctx"
-
 b8                                vc_priv_check_layers(char **layers, u32 count);
 b8                                vc_priv_check_instance_extensions(char **extensions, u32 count);
 VKAPI_ATTR VkBool32 VKAPI_CALL    vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
