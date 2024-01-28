@@ -8,12 +8,13 @@
 #define FEMTOLOG_IMPLEMENTATION
 #include "femtolog.h"
 
-b8                                vc_priv_check_layers(char **layers, u32 count);
-b8                                vc_priv_check_instance_extensions(char **extensions, u32 count);
-VKAPI_ATTR VkBool32 VKAPI_CALL    vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
+b8                             vc_priv_check_layers(char **layers, u32 count);
+b8                             vc_priv_check_instance_extensions(char **extensions, u32 count);
+VKAPI_ATTR VkBool32 VKAPI_CALL vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
 // "Dynamic" functions
-static VkResult                   vc_vkCreateDebugUtilsMessengerEXT(
+static VkResult
+                               vc_vkCreateDebugUtilsMessengerEXT(
     VkInstance                                  instance,
     const VkDebugUtilsMessengerCreateInfoEXT   *pCreateInfo,
     const VkAllocationCallbacks                *pAllocator,
@@ -27,7 +28,8 @@ static VkResult                   vc_vkCreateDebugUtilsMessengerEXT(
     return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static void    vc_vkDestroyDebugUtilsMessengerEXT(
+static void
+vc_vkDestroyDebugUtilsMessengerEXT(
     VkInstance                     instance,
     VkDebugUtilsMessengerEXT       messenger,
     const VkAllocationCallbacks   *pAllocator)
@@ -39,14 +41,15 @@ static void    vc_vkDestroyDebugUtilsMessengerEXT(
     }
 }
 
-bool    vc_ctx_create(vc_ctx                *ctx,
-                      VkApplicationInfo      app_info,
-                      vc_windowing_system   *windowing_system,
-                      bool                   enable_debugging,
-                      uint32_t               layer_count,
-                      const char           **layer_names,
-                      uint32_t               extension_count,
-                      const char           **extension_names)
+bool
+vc_ctx_create(vc_ctx                *ctx,
+              VkApplicationInfo      app_info,
+              vc_windowing_system   *windowing_system,
+              bool                   enable_debugging,
+              uint32_t               layer_count,
+              const char           **layer_names,
+              uint32_t               extension_count,
+              const char           **extension_names)
 {
     vc_info("Creating vulcain context");
 
@@ -160,12 +163,23 @@ bool    vc_ctx_create(vc_ctx                *ctx,
         vc_info("Debugging enabled");
     }
 
+    // Create handle pool
+    vc_handles_manager_create(&ctx->handles_manager);
+
     return TRUE;
 }
 
-void    vc_ctx_destroy(vc_ctx   *ctx)
+void
+vc_ctx_destroy(vc_ctx   *ctx)
 {
     vc_info("Destroying a vulkan context");
+    // Device destruction
+    if(ctx->current_device != VK_NULL_HANDLE)
+    {
+        vc_trace("Destroying device");
+        vkDestroyDevice(ctx->current_device, NULL);
+    }
+
     if(ctx->debugging_enabled)
     {
         vc_trace("Debugging was enabled, destroying debugging messenger");
@@ -177,7 +191,8 @@ void    vc_ctx_destroy(vc_ctx   *ctx)
 }
 
 // Checks for layers availability
-b8    vc_priv_check_layers(char **layers, u32 count)
+b8
+vc_priv_check_layers(char **layers, u32 count)
 {
     u32 total_count = 0;
     vkEnumerateInstanceLayerProperties(&total_count, NULL);
@@ -207,7 +222,8 @@ b8    vc_priv_check_layers(char **layers, u32 count)
 }
 
 // Checks for instance extensions availability
-b8    vc_priv_check_instance_extensions(char **extensions, u32 count)
+b8
+vc_priv_check_instance_extensions(char **extensions, u32 count)
 {
     u32 total_count = 0;
     vkEnumerateInstanceExtensionProperties(NULL, &total_count, NULL);
@@ -239,28 +255,29 @@ b8    vc_priv_check_instance_extensions(char **extensions, u32 count)
 #undef VC_CURRENT_SUBSYS_NAME
 #define VC_CURRENT_SUBSYS_NAME "vk_valid"
 // Debug utils messenger callback
-VKAPI_ATTR VkBool32 VKAPI_CALL    vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
+VKAPI_ATTR VkBool32 VKAPI_CALL
+vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
     switch (messageSeverity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        vc_trace("[VULKAN]: %s", pCallbackData->pMessage);
+        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        vc_trace("[VULKAN]: %s", pCallbackData->pMessage);
+        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        vc_trace("[VULKAN]: %s", pCallbackData->pMessage);
+        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        vc_trace("[VULKAN]: %s", pCallbackData->pMessage);
+        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     default:
-        vc_trace("[VULKAN]: %s", pCallbackData->pMessage);
+        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
     }
     return VK_FALSE;

@@ -8,6 +8,9 @@
    the generic pool into which objects will be stored.
  */
 
+#ifndef __VC_HANDLE_POOL__
+#define __VC_HANDLE_POOL__
+
 #include "../base/base.h"
 
 typedef struct
@@ -40,10 +43,11 @@ typedef union
     };
 } vc_handle_mask;
 
-void    vc_handle_pool_create(vc_handle_pool *pool, u64 initial_chunk_count, u64 managed_size);
-void    vc_handle_pool_destroy(vc_handle_pool   *pool);
+void  vc_handle_pool_create(vc_handle_pool *pool, u64 initial_chunk_count, u64 managed_size);
+void  vc_handle_pool_destroy(vc_handle_pool   *pool);
 
-u32     vc_handle_pool_alloc(vc_handle_pool   *pool);
-void   *vc_handle_pool_deref(vc_handle_pool *pool, u32 id);
-void    vc_handle_pool_dealloc(vc_handle_pool *pool, u32 id);
+u32   vc_handle_pool_alloc(vc_handle_pool   *pool);
+void *vc_handle_pool_deref(vc_handle_pool *pool, u32 id);
+void  vc_handle_pool_dealloc(vc_handle_pool *pool, u32 id);
 
+#endif // __VC_HANDLE_POOL__

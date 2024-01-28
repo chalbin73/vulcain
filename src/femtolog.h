@@ -28,16 +28,17 @@ typedef struct
     const char     *subsystem_name;
     const char     *file;
     uint32_t        line_number;
+    const char     *fmt;
     va_list         args;
 } fl_log_event;
 
 typedef void (*fl_log_fn_ptr)(void *user_data, fl_log_event *ev);
 
-void    fl_set_quiet(bool    quiet);
-void    fl_set_level(fl_log_level    min_level);
-void    fl_add_fd(FILE *fd, fl_log_level min_level);
-void    fl_add_callback(fl_log_fn_ptr fn, void *user_data, fl_log_level min_level);
-void    fl_log(fl_log_level log_level, const char *file, uint32_t line_number, const char *fmt, ...);
+void fl_set_quiet(bool    quiet);
+void fl_set_level(fl_log_level    min_level);
+void fl_add_fd(FILE *fd, fl_log_level min_level);
+void fl_add_callback(fl_log_fn_ptr fn, void *user_data, fl_log_level min_level);
+void fl_log(fl_log_level log_level, const char *file, uint32_t line_number, const char *fmt, ...);
 
 
 #define fl_log_trace(fmt, ...) \
@@ -60,7 +61,6 @@ void    fl_log(fl_log_level log_level, const char *file, uint32_t line_number, c
 
 #endif // __FEMTOLOG_H__
 
-#define FEMTOLOG_IMPLEMENTATION
 #ifdef FEMTOLOG_IMPLEMENTATION
 
 static const char * const fl_log_level_names[FL_LOG_LEVEL_COUNT] =
@@ -105,7 +105,8 @@ fl_log_ctx =
     0
 };
 
-static void    fl_stdout_clbk(void *user_data, fl_log_event *ev)
+static void
+fl_stdout_clbk(void *user_data, fl_log_event *ev)
 {
     char time_buf[32];
     strftime(time_buf, 32, "%H:%M:%S", ev->timestamp);
@@ -148,7 +149,8 @@ static void    fl_stdout_clbk(void *user_data, fl_log_event *ev)
     fflush(stdout);
 }
 
-void    fl_fd_clbk(void *user_data, fl_log_event *ev)
+void
+fl_fd_clbk(void *user_data, fl_log_event *ev)
 {
     FILE *fd = user_data;
     char time_buf[32];
@@ -175,12 +177,14 @@ void    fl_fd_clbk(void *user_data, fl_log_event *ev)
     fflush(fd);
 }
 
-void    fl_add_fd(FILE *fd, fl_log_level min_level)
+void
+fl_add_fd(FILE *fd, fl_log_level min_level)
 {
     fl_add_callback(fl_fd_clbk, fd, min_level);
 }
 
-void    fl_add_callback(fl_log_fn_ptr fn, void *user_data, fl_log_level min_level)
+void
+fl_add_callback(fl_log_fn_ptr fn, void *user_data, fl_log_level min_level)
 {
     if(fl_log_ctx.callback_count == FL_MAX_CALLBACKS)
     {
@@ -198,17 +202,20 @@ void    fl_add_callback(fl_log_fn_ptr fn, void *user_data, fl_log_level min_leve
     };
 }
 
-void    fl_set_quiet(bool    quiet)
+void
+fl_set_quiet(bool    quiet)
 {
     fl_log_ctx.quiet = quiet;
 }
 
-void    fl_set_level(fl_log_level    min_level)
+void
+fl_set_level(fl_log_level    min_level)
 {
     fl_log_ctx.min_level = min_level;
 }
 
-void    fl_log(fl_log_level log_level, const char *file, uint32_t line_number, const char *fmt, ...)
+void
+fl_log(fl_log_level log_level, const char *file, uint32_t line_number, const char *fmt, ...)
 {
     fl_log_event ev =
     {

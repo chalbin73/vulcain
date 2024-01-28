@@ -15,3 +15,9 @@ typedef struct
     VkSwapchainKHR    swapchain;
 } _vc_swapchain_intern;
 
+typedef struct
+{
+    VkQueue         queue;
+    VkQueueFlags    queue_flags;
+} _vc_queue_intern;
+
