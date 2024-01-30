@@ -1,5 +1,4 @@
 #include <vulkan/vulkan.h>
-#include "base/base.h"
 
 /* ---------------- Enum helpers ---------------- */
 const char   *vc_priv_VkColorSpaceKHR_to_str(VkColorSpaceKHR    input_value);

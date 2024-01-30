@@ -73,5 +73,16 @@ void              vc_device_builder_set_score_func(vc_device_builder builder, vc
  */
 vc_queue          vc_device_builder_add_queue(vc_device_builder builder, VkQueueFlags queue_types);
 
+/**
+ * @brief Requests the builder to create, or select a queue with present support. The queue is then written in the handle pointed to by handle
+ *
+ * @param builder The device builder
+ * @param queue[out] A queue handle. Cannot be used before vc_device_create_end. Present support is guaranteed on this queue.
+ * @param windowing_system The windowing system, with surface creation capabilities, to check for present ability.
+ *
+ * @attention Only one presentation can be queried. If presentation support is required, it'll be provided to the last request.
+ */
+void              vc_device_builder_request_presentation_support(vc_device_builder builder, vc_queue *queue, vc_windowing_system windowing_system);
+
 #endif //__VC_DEVICE__
 

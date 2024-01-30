@@ -1,9 +1,8 @@
 #ifndef __VC_HANDLES__
 #define __VC_HANDLES__
 
-#include "../base/types.h"
+#include "../base/base.h"
 #include "vc_handle_pool.h" // TODO: Figure out a neat way to not include this
-#include "../base/data_structures/darray.h"
 
 typedef enum
 {

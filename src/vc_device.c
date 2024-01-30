@@ -2,6 +2,8 @@
 #include <alloca.h>
 #include "vc_enum_util.h"
 #include "handles/vc_internal_types.h"
+#include "base/base.h"
+#include "base/data_structures/darray.h"
 #include <string.h>
 
 
@@ -14,6 +16,7 @@ typedef struct
     // Filled in by the queue allocation system
     u32             familly;
     u32             index;
+
 } _vc_db_queue_request;
 
 typedef struct
@@ -25,13 +28,40 @@ typedef struct
     void                       *score_func_usr_data;
 
     char                      **extension_requests;  // darray
+    vc_queue                   *presentation_dest;
+    vc_windowing_system         win_sys;
 } _vc_db;
 
+// Represents a simple system, to allocate queues based on requests
+typedef struct
+{
+    VkPhysicalDevice           physical_device;
+    VkQueueFamilyProperties   *props;
+    u32                       *allocations;
+    u32                        count;
+} _vc_queue_allocator;
+
 // Private prototypes
-b8 _vc_device_creation_prepare_queue_ci(VkPhysicalDevice dev, _vc_db_queue_request **requests_darray, VkDeviceQueueCreateInfo **out_infos_darray);
-b8 _vc_device_creation_physcial_device_supports_extensions(VkPhysicalDevice device, char **extensions, u32 ext_count);
+void                _vc_db_queue_allocator_destroy(_vc_queue_allocator   *alloc);
+b8                  _vc_db_queue_allocator_alloc(_vc_queue_allocator *alloc, VkQueueFlags required_flags, u32 *family_id, u32 *index);
+_vc_queue_allocator _vc_db_queue_allocator_init(VkPhysicalDevice    dev);
+void                _vc_db_queue_allocator_produce_ci(_vc_queue_allocator *alloc, VkDeviceQueueCreateInfo **queue_darray);
+b8                  _vc_db_queue_allocator_enable_present(_vc_queue_allocator *alloc, VkSurfaceKHR surface, u32 *family, u32 *index);
+b8                  _vc_device_creation_physcial_device_supports_extensions(VkPhysicalDevice device, char **extensions, u32 ext_count);
 
+i32
+_vc_device_creation_queue_comp(VkQueueFlags *a, VkQueueFlagBits *b)
+{
+    i32 comp_a =
+        ( (*a) & VK_QUEUE_GRAPHICS_BIT ) ? 2 : 0 +
+        ( (*a) & VK_QUEUE_COMPUTE_BIT ) ? 1 : 0;
 
+    i32 comp_b =
+        ( (*a) & VK_QUEUE_GRAPHICS_BIT ) ? 2 : 0 +
+        ( (*a) & VK_QUEUE_COMPUTE_BIT ) ? 1 : 0;
+
+    return comp_a - comp_b;
+}
 
 // Definitions
 
@@ -44,6 +74,7 @@ vc_device_builder_begin(vc_ctx   *ctx)
     device_builder->ctx                = ctx;
     device_builder->queue_requests     = darray_create(_vc_db_queue_request);
     device_builder->extension_requests = darray_create(char *);
+    device_builder->presentation_dest  = VC_NULL_HANDLE;
     return device_builder;
 }
 
@@ -52,7 +83,10 @@ vc_device_builder_end(vc_device_builder    builder)
 {
     // -- Enumerate all available physical devices
     _vc_db *device_builder = builder;
+    vc_debug(" ####  Device creation  #### ");
     vc_trace("Ending and commiting device builder");
+
+    b8 presentation_requested = device_builder->presentation_dest ? TRUE : FALSE;
 
     u32 phy_count = 0;
     vkEnumeratePhysicalDevices(device_builder->ctx->vk_instance, &phy_count, NULL);
@@ -66,9 +100,11 @@ vc_device_builder_end(vc_device_builder    builder)
     VkPhysicalDevice *phy_devices = alloca(sizeof(VkPhysicalDevice) * phy_count);
     vkEnumeratePhysicalDevices(device_builder->ctx->vk_instance, &phy_count, phy_devices);
 
-    vc_info("%d Vulkan physical device(s) found.", phy_count);
+    vc_debug("");
+    vc_debug("~ Physical device selection ~");
 
     // -- Print available devices
+    vc_info("%d Vulkan physical device(s) found.", phy_count);
     {
         vc_debug("Available devices :");
         VkPhysicalDeviceProperties prop;
@@ -78,6 +114,9 @@ vc_device_builder_end(vc_device_builder    builder)
             vc_debug("\t[%2d] '%s'", i, prop.deviceName);
         }
     }
+
+    // -- Sort queues in terms of complexity
+    darray_qsort(device_builder->queue_requests, _vc_device_creation_queue_comp);
 
     // -- Log requested queues
     {
@@ -98,22 +137,56 @@ vc_device_builder_end(vc_device_builder    builder)
 
     // -- -- Get rid of devices that can not be used
 
+    // A dummy surface is created to check for support and delted immediatly after
+    VkSurfaceKHR dummy_surface = VK_NULL_HANDLE;
+    if(presentation_requested)
+    {
+        VK_CHECK(device_builder->win_sys.create_surface(
+            device_builder->ctx->vk_instance,
+            device_builder->win_sys.udata,
+            NULL,
+            &dummy_surface
+            ),
+              "Could not create dummy check surface")  ;
+    }
+    // VkSurfaceKHR dummy_surface = device_builder->win_sys
+
+
     // -- Queue support
     {
-        vc_debug("Devices that cannot fullfill the requested queues :");
+        vc_debug("");
+        if(presentation_requested)
+            vc_debug("Presentation was requested for windowing system: '%s'", device_builder->win_sys.windowing_system_name);
+        vc_debug("Devices which cannot fullfill the requested queues :");
+        u32 queue_req_count = darray_length(device_builder->queue_requests);
         for(u32 i = 0; i < phy_count; i++)
         {
-            b8 supported = _vc_device_creation_prepare_queue_ci(phy_devices[i], &device_builder->queue_requests, NULL);
-            if(!supported)
+            // Virtually allocate queues, to see if some queue requests will not be able to be fullfilled.
+            _vc_queue_allocator alloc = _vc_db_queue_allocator_init(phy_devices[i]);
+            b8 valid                  = TRUE;
+            for(u32 q = 0; q < queue_req_count; q++)
             {
-                vc_debug("\t[%2d] Cannot fullfill queues. Discarded.", i);
-                phy_devices[i] = VK_NULL_HANDLE;
+                valid &= _vc_db_queue_allocator_alloc(&alloc, device_builder->queue_requests[q].requested_flags, NULL, NULL);
+            }
+
+            if(presentation_requested)
+            {
+                valid &= _vc_db_queue_allocator_enable_present(&alloc, dummy_surface, NULL, NULL);
+            }
+
+            _vc_db_queue_allocator_destroy(&alloc);
+
+            if(!valid)
+            {
+                phy_devices[i] = VK_NULL_HANDLE; // Get rid of unusable device.
+                vc_debug("\t[%2d] cannot fullfill queues", i);
             }
         }
     }
 
     // -- Extension support
     {
+        vc_debug("");
         vc_debug("Devices that cannot fullfill the requested extensions :");
         for(u32 i = 0; i < phy_count; i++)
         {
@@ -185,10 +258,29 @@ vc_device_builder_end(vc_device_builder    builder)
     }
 
     // -- -- Logical device creation
-
     vc_debug("Preparing queue create infos.");
+    u32 req_count             = darray_length(device_builder->queue_requests);
+    _vc_queue_allocator alloc = _vc_db_queue_allocator_init(selected_phy);
+    for(u32 i = 0; i < req_count; i++)
+    {
+        u32 fam_id = 0;
+        u32 index  = 0;
+        _vc_db_queue_allocator_alloc(&alloc, device_builder->queue_requests[i].requested_flags, &fam_id, &index);
+        device_builder->queue_requests[i].familly = fam_id;
+        device_builder->queue_requests[i].index   = index;
+    }
+
+    u32 present_family = 0;
+    u32 present_index  = 0;
+    if(presentation_requested)
+    {
+        _vc_db_queue_allocator_enable_present(&alloc, dummy_surface, &present_family, &present_index);
+    }
+
     VkDeviceQueueCreateInfo *queues_ci = darray_create(VkDeviceQueueCreateInfo);
-    _vc_device_creation_prepare_queue_ci(selected_phy, &device_builder->queue_requests, &queues_ci);
+    _vc_db_queue_allocator_produce_ci(&alloc, &queues_ci);
+
+    _vc_db_queue_allocator_destroy(&alloc);
 
     VkDeviceCreateInfo device_ci =
     {
@@ -226,7 +318,33 @@ vc_device_builder_end(vc_device_builder    builder)
 
         queue_struct->queue       = q;
         queue_struct->queue_flags = device_builder->queue_requests->requested_flags;
+
+        if(
+            device_builder->queue_requests[i].index == present_index &&
+            device_builder->queue_requests[i].familly == present_family &&
+            presentation_requested
+            )
+        {
+            *device_builder->presentation_dest = hndl;
+            device_builder->presentation_dest  = NULL;
+        }
     }
+
+    if(presentation_requested && device_builder->presentation_dest != NULL)
+    {
+        // this means the presentation queue was not filled in the previous loop, meaning a new handle is to be made
+        vc_queue pres                 = vc_handles_manager_alloc(&device_builder->ctx->handles_manager, VC_HANDLE_QUEUE);
+        _vc_queue_intern *pres_struct = vc_handles_manager_deref(&device_builder->ctx->handles_manager, pres);
+
+        VkQueue q = VK_NULL_HANDLE;
+
+        vkGetDeviceQueue(device, present_family, present_index, &q);
+
+        pres_struct->queue                 = q;
+        pres_struct->queue_flags           = 0; // Presentation
+        *device_builder->presentation_dest = pres;
+    }
+
     vc_debug("Queues retrieved.");
 
     // -- Cleanup
@@ -237,6 +355,11 @@ vc_device_builder_end(vc_device_builder    builder)
         mem_free(device_builder->extension_requests[i]);
     }
     darray_destroy(device_builder->extension_requests);
+
+    if(dummy_surface != VK_NULL_HANDLE)
+    {
+        vkDestroySurfaceKHR(device_builder->ctx->vk_instance, dummy_surface, NULL);
+    }
 
     mem_free(device_builder);
     vc_trace("Device creation finished.");
@@ -280,149 +403,12 @@ _vc_device_creation_physcial_device_supports_extensions(VkPhysicalDevice device,
     return TRUE;
 }
 
-#define _VC_QUEUE_FLAGS_COMP(f) \
-        ( \
-            ( (f)&VK_QUEUE_GRAPHICS_BIT ) ? 2 : 0 + \
-            ( (f)&VK_QUEUE_COMPUTE_BIT ) ? 1 : 0 \
-        )
-
-/**
- * @brief Sorts a request array by most complex requests
- *
- * @param reqs A darray of queue requests
- * @note Most complex requests will be at lower indices
- */
 void
-_vc_device_creation_sort_queue_request(_vc_db_queue_request  **reqs)
+vc_device_builder_request_presentation_support(vc_device_builder builder, vc_queue *queue, vc_windowing_system windowing_system)
 {
-    // Simple selection sort
-    u32 len = darray_length(*reqs);
-    for(u32 i = 0; i < len; i++)
-    {
-        // Select maximum
-        u32 max_id   = 0;
-        i32 max_comp = -I32_MAX;
-        for(u32 j = 0; j < len - i; j++)
-        {
-            i32 comp = _VC_QUEUE_FLAGS_COMP( (*reqs)[j].requested_flags );
-            if(comp > max_comp)
-            {
-                max_comp = comp;
-                max_id   = j;
-            }
-        }
-
-        // Move maximum on top
-        _vc_db_queue_request req =
-        {
-            0
-        };
-        darray_pop_at(*reqs, max_id, &req);
-        darray_push(*reqs, req);
-    }
-}
-
-
-
-/**
- * @brief Checks wether or not a specific physical device can fullfill a request of queues, and prepares queue create infos.
- *
- * @param dev The physical device to check
- * @param requests_darray The array of requests
- * @param out_infos_darray The output darray of create infos. Can be NULL.
- * @return Can it be fullfilled ?
- */
-b8
-_vc_device_creation_prepare_queue_ci(VkPhysicalDevice dev, _vc_db_queue_request **requests_darray, VkDeviceQueueCreateInfo **out_infos_darray)
-{
-    u32 qp_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(dev, &qp_count, NULL);
-    VkQueueFamilyProperties *qps = alloca( qp_count * sizeof(VkQueueFamilyProperties) );
-    u32 *request_count           = alloca( qp_count * sizeof(VkQueueFamilyProperties) );
-    mem_memset(request_count, 0, sizeof(VkQueueFamilyProperties) * qp_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(dev, &qp_count, qps);
-
-    // Sort by most complex requests
-    _vc_device_creation_sort_queue_request(requests_darray);
-
-    /* SORT DEBUG
-       {
-        vc_debug("Sorted Requested queues :");
-        vc_debug("\t[id  G|C|T]");
-        for(u32 i = 0; i < darray_length(*requests_darray); i++)
-        {
-            VkQueueFlags flags = (*requests_darray)[i].requested_flags;
-            vc_debug(
-                "\t[%2i] %c|%c|%c",
-                i,
-                flags & VK_QUEUE_GRAPHICS_BIT ? 'G' : ' ',
-                flags & VK_QUEUE_COMPUTE_BIT ? 'C' : ' ',
-                flags & VK_QUEUE_TRANSFER_BIT ? 'T' : ' '
-                );
-        }
-       }
-       SORT DEBUG */
-
-    // Now most demanding requests are down towards i = 0. We fullfill those first :
-
-    u32 len = darray_length(*requests_darray);
-    for(u32 i = 0; i < len; i++)
-    {
-        b8 fullfilled = FALSE;
-        // Search a queue that can fullfill :
-        for(u32 j = 0; j < qp_count; j++)
-        {
-            if(
-                ( (qps[j].queueFlags & (*requests_darray)[i].requested_flags) == (*requests_darray)[i].requested_flags ) &&
-                request_count[j] < qps[j].queueCount
-                )
-            {
-                // Fill in the information for queue retrival latter.
-                (*requests_darray)[i].familly = j;
-                (*requests_darray)[i].index   = request_count[j];
-
-                // Virtually allocate the queue
-                request_count[j]++;
-                fullfilled = TRUE;
-
-            }
-        }
-
-        if(!fullfilled)
-        {
-            //One requested queue could not be fullfilled. Aborting
-            return FALSE;
-        }
-    }
-
-    if(!out_infos_darray)
-    {
-        // Caller of the function just wants to know if requests can be fullfilled. Do not create infos.
-        return TRUE;
-    }
-
-    // Create createinfos.
-
-    for(u32 i = 0; i < qp_count; i++)
-    {
-        if(request_count[i] != 0) // Queue was requested in this familly
-        {
-            static f32 one_priorities[32] =
-            {
-                0
-            }; // TODO: Make this configurable
-            VkDeviceQueueCreateInfo ci =
-            {
-                .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                .queueFamilyIndex = i,
-                .queueCount       = request_count[i],
-                .pQueuePriorities = one_priorities,
-            };
-            darray_push(*out_infos_darray, ci);
-        }
-    }
-
-    return TRUE;
+    _vc_db *device_builder = builder;
+    device_builder->presentation_dest = queue;
+    device_builder->win_sys           = windowing_system;
 }
 
 void
@@ -460,5 +446,135 @@ vc_device_builder_add_queue(vc_device_builder builder, VkQueueFlags queue_types)
     darray_push(device_builder->queue_requests, rq);
 
     return hndl;
+}
+
+_vc_queue_allocator
+_vc_db_queue_allocator_init(VkPhysicalDevice    dev)
+{
+    _vc_queue_allocator alloc;
+    alloc.physical_device = dev;
+
+    vkGetPhysicalDeviceQueueFamilyProperties(alloc.physical_device, &alloc.count, NULL);
+
+
+    alloc.props       = mem_allocate(sizeof(VkQueueFamilyProperties) * alloc.count, MEMORY_TAG_RENDERER);
+    alloc.allocations = mem_allocate(sizeof(u32) * alloc.count, MEMORY_TAG_RENDERER);
+    mem_memset(alloc.allocations, 0, sizeof(u32) * alloc.count);
+
+    vkGetPhysicalDeviceQueueFamilyProperties(alloc.physical_device, &alloc.count, alloc.props);
+
+    return alloc;
+}
+
+b8
+_vc_db_queue_allocator_alloc(_vc_queue_allocator *alloc, VkQueueFlags required_flags, u32 *family_id, u32 *index)
+{
+    for(u32 i = 0; i < alloc->count; i++ )
+    {
+        if(
+            ( (required_flags & alloc->props[i].queueFlags) == required_flags ) &&
+            (alloc->allocations[i] < alloc->props[i].queueCount)
+            )
+        {
+            if(family_id)
+            {
+                *family_id = i;
+            }
+
+            if(index)
+            {
+                *index = alloc->allocations[i];
+            }
+
+            alloc->allocations[i]++;
+
+            return TRUE; // Queue was found and alloced
+        }
+    }
+
+    return FALSE; // No available queue was found
+}
+
+void
+_vc_db_queue_allocator_produce_ci(_vc_queue_allocator *alloc, VkDeviceQueueCreateInfo **queue_darray)
+{
+    for(u32 i = 0; i < alloc->count; i++)
+    {
+        if(alloc->allocations[i] == 0)
+            continue;
+
+        static const f32 zeros[32] =
+        {
+            0
+        };
+        VkDeviceQueueCreateInfo ci =
+        {
+            .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .pQueuePriorities = zeros,
+            .queueCount       = alloc->allocations[i],
+            .queueFamilyIndex = i,
+        };
+        darray_push(*queue_darray, ci);
+    }
+}
+
+b8
+_vc_db_queue_allocator_enable_present(_vc_queue_allocator *alloc, VkSurfaceKHR surface, u32 *family, u32 *index)
+{
+    u32 supporting_family = 0; // Index for found supporting family (everyone deserves one !!)
+
+    // Check if a preallocated queue has present support
+    b8 has_support = FALSE;
+    for(u32 i = 0; i < alloc->count; i++)
+    {
+        VkBool32 support = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR(alloc->physical_device, i, surface, &support);
+
+        if(!support)
+            continue;
+
+        has_support = TRUE;
+
+        // Is supported
+        if(alloc->allocations[i] != 0)
+        {
+            // An already alloced queue was found with present support
+            if(family)
+                *family = i;
+
+            if(index)
+                *index = 0;
+
+            return TRUE;
+        }
+
+        supporting_family = i;
+    }
+
+    if(!has_support)
+    {
+        return FALSE;
+    }
+
+    // If we end up here, support is existing, but not on previously allocated queues, allocate new queue
+    if(family)
+        *family = supporting_family;
+
+    if(index)
+        *index = 0;
+
+    alloc->allocations[supporting_family]++; // Should be one
+    return TRUE;
+}
+
+void
+_vc_db_queue_allocator_destroy(_vc_queue_allocator   *alloc)
+{
+    mem_free(alloc->allocations);
+    mem_free(alloc->props);
+    *alloc = (_vc_queue_allocator)
+    {
+        0
+    };
 }
 

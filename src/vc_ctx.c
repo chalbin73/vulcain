@@ -1,6 +1,5 @@
 #include "vulcain.h"
 
-#include "base/data_structures/darray.h"
 #include <string.h>
 #include <alloca.h>
 #include "vc_enum_util.h"
@@ -8,13 +7,16 @@
 #define FEMTOLOG_IMPLEMENTATION
 #include "femtolog.h"
 
+#include "base/base.h"
+#include "base/data_structures/darray.h"
+
 b8                             vc_priv_check_layers(char **layers, u32 count);
 b8                             vc_priv_check_instance_extensions(char **extensions, u32 count);
 VKAPI_ATTR VkBool32 VKAPI_CALL vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
 // "Dynamic" functions
 static VkResult
-                               vc_vkCreateDebugUtilsMessengerEXT(
+vc_vkCreateDebugUtilsMessengerEXT(
     VkInstance                                  instance,
     const VkDebugUtilsMessengerCreateInfoEXT   *pCreateInfo,
     const VkAllocationCallbacks                *pAllocator,

@@ -1,5 +1,4 @@
 #include "pool_allocator.h"
-#include <alloca.h>
 
 void    mem_pool_create(mem_pool *pool, void *memory, u64 chunk_size, u64 chunk_count)
 {

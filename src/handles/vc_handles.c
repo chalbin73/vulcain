@@ -7,6 +7,7 @@
 #include "vc_handles.h"
 #include "vc_internal_types.h"
 #include "../vulcain.h"
+#include "../base/data_structures/darray.h"
 
 static const u64 _vc_struct_sizes[VC_HANDLE_TYPES_COUNT] =
 {
