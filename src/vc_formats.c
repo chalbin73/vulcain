@@ -3,7 +3,6 @@
  * @brief Format query code, to query formats based on requested features on device
  */
 
-/*
 #include "vulcain.h"
 
 b8
@@ -12,7 +11,7 @@ vc_format_query_index(vc_ctx *ctx, vc_format_query query, vc_format_set candidat
     for(int i = 0; i < candidates.format_count; i++)
     {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(ctx->current_device, candidates.formats[i], &props);
+        vkGetPhysicalDeviceFormatProperties(ctx->current_physical_device, candidates.formats[i], &props);
 
         b8 valid = TRUE;
 
@@ -30,7 +29,7 @@ vc_format_query_index(vc_ctx *ctx, vc_format_query query, vc_format_set candidat
 }
 
 VkFormat
-vc_format_query(vc_ctx *ctx, format_query query, vc_format_set candidates)
+vc_format_query_format(vc_ctx *ctx, vc_format_query query, vc_format_set candidates)
 {
     u32 index = 0;
     if( vc_format_query_index(ctx, query, candidates, &index) )
@@ -39,4 +38,4 @@ vc_format_query(vc_ctx *ctx, format_query query, vc_format_set candidates)
     }
     return FALSE;
 }
-*/
+

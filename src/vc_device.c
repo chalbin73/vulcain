@@ -48,6 +48,7 @@ _vc_queue_allocator _vc_db_queue_allocator_init(VkPhysicalDevice    dev);
 void                _vc_db_queue_allocator_produce_ci(_vc_queue_allocator *alloc, VkDeviceQueueCreateInfo **queue_darray);
 b8                  _vc_db_queue_allocator_enable_present(_vc_queue_allocator *alloc, VkSurfaceKHR surface, u32 *family, u32 *index);
 b8                  _vc_device_creation_physcial_device_supports_extensions(VkPhysicalDevice device, char **extensions, u32 ext_count);
+void                _vc_setup_vma(vc_ctx   *ctx);
 
 i32
 _vc_device_creation_queue_comp(VkQueueFlags *a, VkQueueFlagBits *b)
@@ -100,6 +101,16 @@ vc_device_builder_end(vc_device_builder    builder)
     VkPhysicalDevice *phy_devices = alloca(sizeof(VkPhysicalDevice) * phy_count);
     vkEnumeratePhysicalDevices(device_builder->ctx->vk_instance, &phy_count, phy_devices);
 
+    // Logging required extensions
+    {
+        vc_debug("Requested extensions for device :");
+        u32 count = darray_length(device_builder->extension_requests);
+        for(u32 i = 0; i < count; i++)
+        {
+            vc_debug("[%2d] '%s'", i, device_builder->extension_requests[i]);
+        }
+    }
+
     vc_debug("");
     vc_debug("~ Physical device selection ~");
 
@@ -141,13 +152,15 @@ vc_device_builder_end(vc_device_builder    builder)
     VkSurfaceKHR dummy_surface = VK_NULL_HANDLE;
     if(presentation_requested)
     {
-        VK_CHECK(device_builder->win_sys.create_surface(
-            device_builder->ctx->vk_instance,
-            device_builder->win_sys.udata,
-            NULL,
-            &dummy_surface
-            ),
-              "Could not create dummy check surface")  ;
+        VK_CHECK(
+            device_builder->win_sys.create_surface(
+                device_builder->ctx->vk_instance,
+                device_builder->win_sys.udata,
+                NULL,
+                &dummy_surface
+                ),
+            "Could not create dummy check surface"
+            );
     }
     // VkSurfaceKHR dummy_surface = device_builder->win_sys
 
@@ -289,8 +302,8 @@ vc_device_builder_end(vc_device_builder    builder)
         .pQueueCreateInfos       = queues_ci,
         .enabledLayerCount       = 0,
         .ppEnabledLayerNames     = NULL,
-        .enabledExtensionCount   = 0,
-        .ppEnabledExtensionNames = NULL,
+        .enabledExtensionCount   = darray_length(device_builder->extension_requests),
+        .ppEnabledExtensionNames = (const char **)device_builder->extension_requests,
         .pEnabledFeatures        = NULL,
     };
 
@@ -317,8 +330,10 @@ vc_device_builder_end(vc_device_builder    builder)
         _vc_queue_intern *queue_struct = vc_handles_manager_deref(&device_builder->ctx->handles_manager, hndl);
 
         queue_struct->queue       = q;
-        queue_struct->queue_flags = device_builder->queue_requests->requested_flags;
+        queue_struct->queue_flags = device_builder->queue_requests[i].requested_flags;
+        queue_struct->queue_family_index = device_builder->queue_requests[i].familly;
 
+        // Set presentation queue
         if(
             device_builder->queue_requests[i].index == present_index &&
             device_builder->queue_requests[i].familly == present_family &&
@@ -326,7 +341,7 @@ vc_device_builder_end(vc_device_builder    builder)
             )
         {
             *device_builder->presentation_dest = hndl;
-            device_builder->presentation_dest  = NULL;
+            device_builder->presentation_dest  = NULL; // Signifies that presentation queue was found.
         }
     }
 
@@ -341,11 +356,15 @@ vc_device_builder_end(vc_device_builder    builder)
         vkGetDeviceQueue(device, present_family, present_index, &q);
 
         pres_struct->queue                 = q;
+        pres_struct->queue_family_index    = present_family;
         pres_struct->queue_flags           = 0; // Presentation
         *device_builder->presentation_dest = pres;
     }
 
     vc_debug("Queues retrieved.");
+
+    device_builder->ctx->current_physical_device = selected_phy;
+    device_builder->ctx->current_device          = device;
 
     // -- Cleanup
     darray_destroy(device_builder->queue_requests);
@@ -363,6 +382,8 @@ vc_device_builder_end(vc_device_builder    builder)
 
     mem_free(device_builder);
     vc_trace("Device creation finished.");
+    vc_debug("Create vulkan memory allocator");
+    _vc_setup_vma(device_builder->ctx);
 }
 
 /**
@@ -409,6 +430,7 @@ vc_device_builder_request_presentation_support(vc_device_builder builder, vc_que
     _vc_db *device_builder = builder;
     device_builder->presentation_dest = queue;
     device_builder->win_sys           = windowing_system;
+    vc_device_builder_request_extension(builder, "VK_KHR_swapchain");
 }
 
 void
@@ -576,5 +598,40 @@ _vc_db_queue_allocator_destroy(_vc_queue_allocator   *alloc)
     {
         0
     };
+}
+
+void
+vc_device_wait_idle(vc_ctx   *ctx)
+{
+    vkDeviceWaitIdle(ctx->current_device);
+}
+
+void
+vc_queue_wait_idle(vc_ctx *ctx, vc_queue queue)
+{
+    _vc_queue_intern *q = vc_handles_manager_deref(&ctx->handles_manager, queue);
+    vkQueueWaitIdle(q->queue);
+}
+
+void
+_vc_setup_vma(vc_ctx   *ctx)
+{
+    VmaVulkanFunctions vulkan_functions =
+    {
+        .vkGetInstanceProcAddr = &vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr   = &vkGetDeviceProcAddr,
+    };
+
+    VmaAllocatorCreateInfo vma_ci =
+    {
+        .flags            = 0,
+        .vulkanApiVersion = VK_API_VERSION_1_1,
+        .physicalDevice   = ctx->current_physical_device,
+        .device           = ctx->current_device,
+        .instance         = ctx->vk_instance,
+        .pVulkanFunctions = &vulkan_functions,
+    };
+
+    vmaCreateAllocator(&vma_ci, &ctx->main_allocator);
 }
 

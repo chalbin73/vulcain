@@ -11,14 +11,22 @@
 
 static const u64 _vc_struct_sizes[VC_HANDLE_TYPES_COUNT] =
 {
-    [VC_HANDLE_SWAPCHAIN] = sizeof(_vc_swapchain_intern),
-    [VC_HANDLE_QUEUE]     = sizeof(_vc_queue_intern),
+    [VC_HANDLE_SWAPCHAIN]      = sizeof(_vc_swapchain_intern),
+    [VC_HANDLE_QUEUE]          = sizeof(_vc_queue_intern),
+    [VC_HANDLE_COMMAND_POOL]   = sizeof(_vc_command_pool_intern),
+    [VC_HANDLE_COMMAND_BUFFER] = sizeof(_vc_command_buffer_intern),
+    [VC_HANDLE_SEMAPHORE]      = sizeof(_vc_semaphore_intern),
+    [VC_HANDLE_IMAGE]      = sizeof(_vc_image_intern),
 };
 
 static const u64 _vc_initial_chunk_counts[VC_HANDLE_TYPES_COUNT] =
 {
-    [VC_HANDLE_SWAPCHAIN] = 8,
-    [VC_HANDLE_QUEUE]     = 8,
+    [VC_HANDLE_SWAPCHAIN]      = 8,
+    [VC_HANDLE_QUEUE]          = 8,
+    [VC_HANDLE_COMMAND_POOL]   = 8,
+    [VC_HANDLE_COMMAND_BUFFER] = 8,
+    [VC_HANDLE_SEMAPHORE]      = 16,
+    [VC_HANDLE_IMAGE]      = 32,
 };
 
 typedef union
@@ -58,10 +66,10 @@ void
 vc_handles_manager_destroy(vc_handles_manager   *mgr)
 {
     u32 length = darray_length(mgr->destroy_queue);
-    for(u32 i = 0; i < length; i++)
+    while(length > 0)
     {
         vc_handle hndl;
-        darray_pop(mgr->destroy_queue, &hndl);
+        darray_pop_at(mgr->destroy_queue, 0, &hndl)
 
         vc_handle_pack pck;
         pck.vc_hndl = hndl;
@@ -71,8 +79,8 @@ vc_handles_manager_destroy(vc_handles_manager   *mgr)
             void *obj = vc_handles_manager_deref(mgr, hndl);
             mgr->destroy_functions[pck.type](mgr->dest_func_usr_data, obj, pck.type);
         }
+        length = darray_length(mgr->destroy_queue);
     }
-
     // Destroy everything
     for(u32 i = 0; i < VC_HANDLE_TYPES_COUNT; i++)
     {
@@ -123,6 +131,16 @@ vc_handles_manager_alloc(vc_handles_manager *mgr, vc_handle_type type)
     darray_push(mgr->destroy_queue, pck.vc_hndl);
 
     return pck.vc_hndl;
+}
+
+vc_handle
+vc_handles_manager_walloc(vc_handles_manager *mgr, vc_handle_type type, void *obj)
+{
+    vc_handle new = vc_handles_manager_alloc(mgr, type);
+    void *dest    = vc_handles_manager_deref(mgr, new);
+
+    mem_memcpy(dest, obj, _vc_struct_sizes[type]);
+    return new;
 }
 
 void

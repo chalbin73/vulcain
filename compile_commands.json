@@ -1,9 +1,11 @@
 [
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/darray.o",
@@ -15,9 +17,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/fio.o",
@@ -29,9 +33,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/handle_allocator.o",
@@ -43,9 +49,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/hashmap.o",
@@ -57,9 +65,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/logging.o",
@@ -71,9 +81,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/memory.o",
@@ -85,9 +97,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/platform_gnulinux.o",
@@ -99,9 +113,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/pool_allocator.o",
@@ -113,9 +129,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/str.o",
@@ -127,9 +145,11 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/tight_b8.o",
@@ -141,9 +161,27 @@
   },
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-I../third_party/vma",
       "-Wall",
       "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_cmds.o",
+      "../src/vc_cmds.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_cmds.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_cmds.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
       "-c",
       "-o",
       "obj/Debug/vulcain/vc_ctx.o",
@@ -152,5 +190,150 @@
     "directory": "/home/albin/coding-projects/vulcain/build",
     "file": "/home/albin/coding-projects/vulcain/src/vc_ctx.c",
     "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_ctx.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_device.o",
+      "../src/vc_device.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_device.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_device.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_enum_util.o",
+      "../src/vc_enum_util.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_enum_util.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_enum_util.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_formats.o",
+      "../src/vc_formats.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_formats.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_formats.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_glfw.o",
+      "../src/win_sys/vc_glfw.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/win_sys/vc_glfw.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_glfw.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_handle_pool.o",
+      "../src/handles/vc_handle_pool.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/handles/vc_handle_pool.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_handle_pool.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_handles.o",
+      "../src/handles/vc_handles.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/handles/vc_handles.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_handles.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_swapchain.o",
+      "../src/vc_swapchain.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_swapchain.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_swapchain.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_sync.o",
+      "../src/vc_sync.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_sync.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_sync.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../src",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain_pg/main.o",
+      "../pg/main.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/pg/main.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain_pg/main.o"
   }
 ]

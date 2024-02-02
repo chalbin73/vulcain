@@ -8,6 +8,10 @@ typedef enum
 {
     VC_HANDLE_SWAPCHAIN = 0,
     VC_HANDLE_QUEUE,
+    VC_HANDLE_COMMAND_POOL,
+    VC_HANDLE_COMMAND_BUFFER,
+    VC_HANDLE_SEMAPHORE,
+    VC_HANDLE_IMAGE,
     VC_HANDLE_TYPES_COUNT,
 } vc_handle_type;
 
@@ -20,6 +24,10 @@ typedef u64                  vc_handle;
 
 VC_DEF_HANDLE(vc_swapchain);
 VC_DEF_HANDLE(vc_queue);
+VC_DEF_HANDLE(vc_command_pool);
+VC_DEF_HANDLE(vc_command_buffer);
+VC_DEF_HANDLE(vc_semaphore);
+VC_DEF_HANDLE(vc_image);
 
 /*
  * @brief Function pointer for cleanly destroying objects stored in the handle manager
@@ -64,7 +72,6 @@ void      vc_handles_manager_destroy(vc_handles_manager   *mgr);
  */
 void     *vc_handles_manager_deref(vc_handles_manager *mgr, vc_handle hndl);
 
-
 /**
  * @brief Allocates a handle in the handle manager
  *
@@ -74,6 +81,15 @@ void     *vc_handles_manager_deref(vc_handles_manager *mgr, vc_handle hndl);
  */
 vc_handle vc_handles_manager_alloc(vc_handles_manager *mgr, vc_handle_type type);
 
+/**
+ * @brief Allocates a handle in the handle manager, and writes the data into the managed object
+ *
+ * @param mgr The handle manager
+ * @param type The type of handle to manage
+ * @param obj A pointer to the data to copy into the manager
+ * @return A handle to the new allocated object
+ */
+vc_handle vc_handles_manager_walloc(vc_handles_manager *mgr, vc_handle_type type, void *obj);
 
 /**
  * @brief Deallocates object from manager, without doing anything else

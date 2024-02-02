@@ -167,6 +167,7 @@ vc_ctx_create(vc_ctx                *ctx,
 
     // Create handle pool
     vc_handles_manager_create(&ctx->handles_manager);
+    vc_handles_manager_set_destroy_function_usr_data(&ctx->handles_manager, ctx);
 
     return TRUE;
 }
@@ -175,10 +176,14 @@ void
 vc_ctx_destroy(vc_ctx   *ctx)
 {
     vc_info("Destroying a vulkan context");
+    vkDeviceWaitIdle(ctx->current_device);
+    vc_trace("Destroying all objects");
+    vc_handles_manager_destroy(&ctx->handles_manager);
     // Device destruction
     if(ctx->current_device != VK_NULL_HANDLE)
     {
-        vc_trace("Destroying device");
+        vc_trace("Destroying device and VMA");
+        vmaDestroyAllocator(ctx->main_allocator);
         vkDestroyDevice(ctx->current_device, NULL);
     }
 
@@ -267,15 +272,15 @@ vc_priv_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, V
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
+        vc_info("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
+        vc_warn("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        vc_trace("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
+        vc_error("[\e[31;1mVULKAN\e[0m]: %s", pCallbackData->pMessage);
         break;
 
     default:
