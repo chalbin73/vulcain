@@ -11,22 +11,26 @@
 
 static const u64 _vc_struct_sizes[VC_HANDLE_TYPES_COUNT] =
 {
-    [VC_HANDLE_SWAPCHAIN]      = sizeof(_vc_swapchain_intern),
-    [VC_HANDLE_QUEUE]          = sizeof(_vc_queue_intern),
-    [VC_HANDLE_COMMAND_POOL]   = sizeof(_vc_command_pool_intern),
-    [VC_HANDLE_COMMAND_BUFFER] = sizeof(_vc_command_buffer_intern),
-    [VC_HANDLE_SEMAPHORE]      = sizeof(_vc_semaphore_intern),
-    [VC_HANDLE_IMAGE]      = sizeof(_vc_image_intern),
+    [VC_HANDLE_SWAPCHAIN]        = sizeof(_vc_swapchain_intern),
+    [VC_HANDLE_QUEUE]            = sizeof(_vc_queue_intern),
+    [VC_HANDLE_COMMAND_POOL]     = sizeof(_vc_command_pool_intern),
+    [VC_HANDLE_COMMAND_BUFFER]   = sizeof(_vc_command_buffer_intern),
+    [VC_HANDLE_SEMAPHORE]        = sizeof(_vc_semaphore_intern),
+    [VC_HANDLE_IMAGE]            = sizeof(_vc_image_intern),
+    [VC_HANDLE_COMPUTE_PIPELINE] = sizeof(_vc_compute_pipeline_intern),
+    [VC_HANDLE_DESCRIPTOR_SET]   = sizeof(_vc_descriptor_set_intern),
 };
 
 static const u64 _vc_initial_chunk_counts[VC_HANDLE_TYPES_COUNT] =
 {
-    [VC_HANDLE_SWAPCHAIN]      = 8,
-    [VC_HANDLE_QUEUE]          = 8,
-    [VC_HANDLE_COMMAND_POOL]   = 8,
-    [VC_HANDLE_COMMAND_BUFFER] = 8,
-    [VC_HANDLE_SEMAPHORE]      = 16,
-    [VC_HANDLE_IMAGE]      = 32,
+    [VC_HANDLE_SWAPCHAIN]        = 8,
+    [VC_HANDLE_QUEUE]            = 8,
+    [VC_HANDLE_COMMAND_POOL]     = 8,
+    [VC_HANDLE_COMMAND_BUFFER]   = 8,
+    [VC_HANDLE_SEMAPHORE]        = 16,
+    [VC_HANDLE_IMAGE]            = 32,
+    [VC_HANDLE_COMPUTE_PIPELINE] = 16,
+    [VC_HANDLE_DESCRIPTOR_SET]   = 32,
 };
 
 typedef union

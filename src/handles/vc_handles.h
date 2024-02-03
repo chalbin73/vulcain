@@ -12,6 +12,8 @@ typedef enum
     VC_HANDLE_COMMAND_BUFFER,
     VC_HANDLE_SEMAPHORE,
     VC_HANDLE_IMAGE,
+    VC_HANDLE_COMPUTE_PIPELINE,
+    VC_HANDLE_DESCRIPTOR_SET,
     VC_HANDLE_TYPES_COUNT,
 } vc_handle_type;
 
@@ -28,6 +30,8 @@ VC_DEF_HANDLE(vc_command_pool);
 VC_DEF_HANDLE(vc_command_buffer);
 VC_DEF_HANDLE(vc_semaphore);
 VC_DEF_HANDLE(vc_image);
+VC_DEF_HANDLE(vc_compute_pipeline);
+VC_DEF_HANDLE(vc_descriptor_set);
 
 /*
  * @brief Function pointer for cleanly destroying objects stored in the handle manager

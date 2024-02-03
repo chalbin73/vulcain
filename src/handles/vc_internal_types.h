@@ -67,3 +67,15 @@ typedef struct
     VmaAllocation    alloc;
 } _vc_image_intern;
 
+typedef struct
+{
+    VkPipeline          pipeline;
+    VkPipelineLayout    layout;
+} _vc_compute_pipeline_intern;
+
+typedef struct
+{
+    VkDescriptorSet          set;
+    VkDescriptorSetLayout    layout;
+} _vc_descriptor_set_intern;
+
