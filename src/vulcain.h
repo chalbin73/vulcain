@@ -7,6 +7,8 @@
 #include <vulkan/vulkan.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "descriptors/vc_ds_alloc.h"
+#include "descriptors/vc_set_layout_cache.h"
 
 #include "femtolog.h"
 
@@ -32,20 +34,24 @@
 // Welcome to vulcain
 typedef struct
 {
-    vc_handles_manager          handles_manager;
+    vc_handles_manager             handles_manager;
 
-    bool                        windowing_enabled; // This means that the application runs in some sort of a window, so swapchains can be created.
-    bool                        debugging_enabled; // This is true if some validation layers are requested.
+    bool                           windowing_enabled; // This means that the application runs in some sort of a window, so swapchains can be created.
+    bool                           debugging_enabled; // This is true if some validation layers are requested.
 
-    vc_windowing_system         windowing_system; // In the case a windowing system is being used.
+    vc_windowing_system            windowing_system; // In the case a windowing system is being used.
 
-    VkInstance                  vk_instance;
-    VkDebugUtilsMessengerEXT    debugging_messenger; // Only used if debugging_enabled.
+    VkInstance                     vk_instance;
+    VkDebugUtilsMessengerEXT       debugging_messenger; // Only used if debugging_enabled.
 
-    VkPhysicalDevice            current_physical_device;
-    VkDevice                    current_device;
+    VkPhysicalDevice               current_physical_device;
+    VkDevice                       current_device;
 
-    VmaAllocator                main_allocator; // See if it would be a good idea to allow multiple allocators ...
+    VmaAllocator                   main_allocator; // See if it would be a good idea to allow multiple allocators ...
+
+    // TODO: Make those two invisible to the outside world
+    vc_descriptor_set_allocator    ds_allocator;
+    vc_set_layout_cache            set_layout_cache;
 } vc_ctx;
 
 typedef struct
@@ -174,6 +180,46 @@ typedef struct
 
 vc_image vc_image_allocate(vc_ctx *ctx, vc_image_create_info create_info);
 
+// ## DESCRIPTORS ##
+
+typedef struct
+{
+    vc_handle    buffer;
+    b8           whole_buffer;
+
+    u64          offset;
+    u64          range;
+} vc_descriptor_buffer_binding;
+
+typedef struct
+{
+    vc_handle        image_view;
+    vc_handle        sampler;
+    VkImageLayout    layout;
+} vc_descriptor_image_binding;
+
+/**
+ * @brief Specifies a binding in a descriptor set. buffer_info and image_info don't need to be set when creating a descriptor set layout.
+ */
+typedef struct
+{
+    uint32_t                        binding;
+    uint32_t                        descriptor_count;
+
+    VkDescriptorType                descriptor_type;
+    VkShaderStageFlags              shader_stages;
+
+    vc_descriptor_buffer_binding   *buffer_info;
+    vc_descriptor_image_binding    *image_info;
+
+} vc_descriptor_set_binding;
+
+typedef struct
+{
+    uint32_t                     binding_count;
+    vc_descriptor_set_binding   *bindings;
+} vc_descriptor_set_info;
+
 // ## COMMAND BUFFERS ##
 
 typedef uint64_t vc_cmd_record;
@@ -194,10 +240,10 @@ void          vc_cmd_image_barrier(vc_cmd_record record, vc_image image,
                                    vc_queue src_queue, vc_queue dst_queue
                                    );
 
-void
-vc_cmd_image_clear(vc_cmd_record record, vc_image image,
-                   VkImageLayout layout,
-                   VkClearColorValue clear_color,
-                   VkImageSubresourceRange subres_range);
+void vc_cmd_image_clear(vc_cmd_record record, vc_image image,
+                        VkImageLayout layout,
+                        VkClearColorValue clear_color,
+                        VkImageSubresourceRange subres_range);
+
 #endif //__VULCAIN_H__
 

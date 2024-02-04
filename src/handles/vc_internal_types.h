@@ -79,3 +79,8 @@ typedef struct
     VkDescriptorSetLayout    layout;
 } _vc_descriptor_set_intern;
 
+typedef struct
+{
+    VkDescriptorSetLayout layout;
+} _vc_descriptor_set_layout_intern;
+

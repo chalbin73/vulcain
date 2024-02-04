@@ -2,7 +2,7 @@
 #define __VC_DS_ALLOC__
 
 #include <vulkan/vulkan.h>
-#include "../vulcain.h"
+#include "../base/types.h"
 
 // Based on vkguide's implementation
 

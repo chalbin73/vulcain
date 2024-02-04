@@ -169,6 +169,10 @@ vc_ctx_create(vc_ctx                *ctx,
     vc_handles_manager_create(&ctx->handles_manager);
     vc_handles_manager_set_destroy_function_usr_data(&ctx->handles_manager, ctx);
 
+    // Post init
+    vc_ds_alloc_create(&ctx->ds_allocator, NULL, 0, 16);
+    vc_slc_create(&ctx->set_layout_cache);
+    
     return TRUE;
 }
 

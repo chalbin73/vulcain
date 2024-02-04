@@ -19,6 +19,7 @@ static const u64 _vc_struct_sizes[VC_HANDLE_TYPES_COUNT] =
     [VC_HANDLE_IMAGE]            = sizeof(_vc_image_intern),
     [VC_HANDLE_COMPUTE_PIPELINE] = sizeof(_vc_compute_pipeline_intern),
     [VC_HANDLE_DESCRIPTOR_SET]   = sizeof(_vc_descriptor_set_intern),
+    [VC_HANDLE_DESCRIPTOR_SET_LAYOUT]   = sizeof(_vc_descriptor_set_layout_intern),
 };
 
 static const u64 _vc_initial_chunk_counts[VC_HANDLE_TYPES_COUNT] =
@@ -31,6 +32,7 @@ static const u64 _vc_initial_chunk_counts[VC_HANDLE_TYPES_COUNT] =
     [VC_HANDLE_IMAGE]            = 32,
     [VC_HANDLE_COMPUTE_PIPELINE] = 16,
     [VC_HANDLE_DESCRIPTOR_SET]   = 32,
+    [VC_HANDLE_DESCRIPTOR_SET_LAYOUT]   = 32,
 };
 
 typedef union
