@@ -3,6 +3,17 @@
 #include "vc_enum_util.h"
 #include <alloca.h>
 
+void
+_vc_image_destroy(vc_ctx *ctx, _vc_image_intern *i)
+{
+    vmaDestroyImage(ctx->main_allocator, i->image, i->alloc);
+}
+
+void
+_vc_image_view_destroy(vc_ctx *ctx, _vc_image_view_intern *i)
+{
+    vkDestroyImageView(ctx->current_device, i->view, NULL);
+}
 
 vc_image
 vc_image_allocate(vc_ctx *ctx, vc_image_create_info create_info)
@@ -63,9 +74,40 @@ vc_image_allocate(vc_ctx *ctx, vc_image_create_info create_info)
         0
     };
 
+    img.externally_managed = FALSE;
+    img.image_format       = create_info.image_format;
+
     VK_CHECKH(vmaCreateImage(ctx->main_allocator, &img_ci, &alloc_ci, &img.image, &img.alloc, NULL), "Could not allocate an image");
 
     vc_image hndl = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE, &img);
+
+    return hndl;
+}
+
+vc_image_view
+vc_image_view_create(vc_ctx *ctx, vc_image image, VkImageViewType type, VkComponentMapping component_map, VkImageSubresourceRange range)
+{
+    _vc_image_intern *image_i = vc_handles_manager_deref(&ctx->handles_manager, image);
+
+    VkImageViewCreateInfo info =
+    {
+        .sType            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .flags            = 0,
+        .image            = image_i->image,
+        .viewType         = type,
+        .format           = image_i->image_format,
+        .components       = component_map,
+        .subresourceRange = range,
+    };
+
+    _vc_image_view_intern view_i =
+    {
+        0
+    };
+
+    VK_CHECKH(vkCreateImageView(ctx->current_device, &info, NULL, &view_i.view), "Could not create an image view.");
+
+    vc_image_view hndl = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE_VIEW, &view_i);
 
     return hndl;
 }

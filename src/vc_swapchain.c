@@ -224,6 +224,7 @@ _vc_swapchain_build(vc_ctx *ctx, _vc_swapchain_intern *s)
             .externally_managed = TRUE,
             .image              = images[i],
             .alloc              = VK_NULL_HANDLE,
+            .image_format = s->surface_format.format,
         };
 
         s->swapchain_images[i] = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE, &img_intern);

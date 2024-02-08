@@ -1,3 +1,4 @@
+#include "vulcain.h"
 #include <vulkan/vulkan.h>
 
 /* ---------------- Enum helpers ---------------- */

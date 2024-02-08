@@ -19,9 +19,7 @@ typedef struct
 
 void
 vc_slc_create(vc_set_layout_cache   *cache);
-
 VkDescriptorSetLayout vc_slc_get(vc_set_layout_cache *cache, VkDevice dev, VkDescriptorSetLayoutCreateInfo info);
-
 void                  vc_slc_destroy(vc_set_layout_cache *cache, VkDevice dev);
 
 

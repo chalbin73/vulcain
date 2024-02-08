@@ -43,7 +43,7 @@ _vc_slc_info_comp(VkDescriptorSetLayoutCreateInfo a, VkDescriptorSetLayoutCreate
 }
 
 void
-vc_slc_create(vc_set_layout_cache *cache)
+vc_slc_create(vc_set_layout_cache   *cache)
 {
     for(u32 i = 0; i < VC_SLC_BUCKET_COUNT; i++)
     {

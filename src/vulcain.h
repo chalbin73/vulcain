@@ -3,12 +3,15 @@
 
 #include "vc_windowing.h"
 #include "handles/vc_handles.h"
-#include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+// ## TODO: Make those header private
+#include <vk_mem_alloc.h>
 #include "descriptors/vc_ds_alloc.h"
 #include "descriptors/vc_set_layout_cache.h"
+// ##
 
 #include "femtolog.h"
 
@@ -178,50 +181,174 @@ typedef struct
     vc_memory_create_info    memory;
 } vc_image_create_info;
 
-vc_image vc_image_allocate(vc_ctx *ctx, vc_image_create_info create_info);
+vc_image      vc_image_allocate(vc_ctx *ctx, vc_image_create_info create_info);
+vc_image_view vc_image_view_create(vc_ctx *ctx, vc_image image, VkImageViewType type, VkComponentMapping component_map, VkImageSubresourceRange range);
+
+// Useful utils
+#define VC_COMP_MAP_ID \
+        (VkComponentMapping) \
+        { \
+            .a = VK_COMPONENT_SWIZZLE_A, \
+            .r = VK_COMPONENT_SWIZZLE_R, \
+            .g = VK_COMPONENT_SWIZZLE_G, \
+            .b = VK_COMPONENT_SWIZZLE_B, \
+        }
+
+#define VC_IMG_SUBRES_COLOR_1 \
+        (VkImageSubresourceRange) \
+        { \
+            .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
+            .layerCount     = 1, \
+            .levelCount     = 1, \
+            .baseMipLevel   = 0, \
+            .baseArrayLayer = 0, \
+        }
+
+// ## BUFFERS ##
+
+/**
+ * @brief Allocates a buffer
+ *
+ * @param ctx A vulcain context
+ * @param size The size of the buffer to allocate
+ * @param flags The flags with which to create the buffer
+ * @param usage The usage of the buffer
+ * @param mem The memory information about the allocation
+ * @return A handle to the buffer
+ */
+vc_buffer vc_buffer_allocate(vc_ctx *ctx, u64 size, VkBufferCreateFlags flags, VkBufferUsageFlags usage, vc_memory_create_info mem);
 
 // ## DESCRIPTORS ##
 
-typedef struct
-{
-    vc_handle    buffer;
-    b8           whole_buffer;
-
-    u64          offset;
-    u64          range;
-} vc_descriptor_buffer_binding;
+// Set layouts
 
 typedef struct
 {
-    vc_handle        image_view;
-    vc_handle        sampler;
-    VkImageLayout    layout;
-} vc_descriptor_image_binding;
+    VkDescriptorSetLayoutBinding   *bindings; // darray
+} vc_descriptor_set_layout_builder;
 
 /**
- * @brief Specifies a binding in a descriptor set. buffer_info and image_info don't need to be set when creating a descriptor set layout.
+ * @brief Adds a single descriptor binding to descriptor set layout
+ *
+ * @param builder The builder (may be 0 initialized)
+ * @param binding The binding index
+ * @param type The descriptor type
+ * @param stages The stages
+ */
+void                     vc_descriptor_set_layout_builder_add_binding(vc_descriptor_set_layout_builder *builder, u32 binding, VkDescriptorType type, VkShaderStageFlags stages);
+/**
+ * @brief Adds some descriptors to a descriptor set layout
+ *
+ * @param builder The builder (may be 0 initialized)
+ * @param binding The binding index
+ * @param descriptor_count The number of descriptors
+ * @param type The descriptor type
+ * @param stages The stages
+ */
+void                     vc_descriptor_set_layout_builder_add_bindings(vc_descriptor_set_layout_builder *builder, u32 binding, u32 descriptor_count, VkDescriptorType type, VkShaderStageFlags stages);
+
+
+/**
+ * @brief Builds a descriptor set
+ *
+ * @param ctx A vulcain context
+ * @param builder The (non non-inited) builder
+ * @param flags The flags to create the set layout with
+ * @return A handle to the set layout
+ */
+vc_descriptor_set_layout vc_descriptor_set_layout_builder_build(vc_ctx *ctx, vc_descriptor_set_layout_builder *builder, VkDescriptorSetLayoutCreateFlags flags);
+
+// Descriptor sets
+
+/**
+ * @brief Allocates a descriptor in the internal pool system
+ *
+ * @param ctx The vulcain context
+ * @param layout The set layout with which to create the descriptor
+ * @return A handle to the allocated descriptor set
+ */
+vc_descriptor_set        vc_descriptor_set_allocate(vc_ctx *ctx, vc_descriptor_set_layout layout);
+
+/**
+ * @brief Representes a writer, which helps writing into descriptor sets
  */
 typedef struct
 {
-    uint32_t                        binding;
-    uint32_t                        descriptor_count;
+    // darrays
+    VkWriteDescriptorSet     *writes;
 
-    VkDescriptorType                descriptor_type;
-    VkShaderStageFlags              shader_stages;
+    VkDescriptorImageInfo    *img_infos;
+    VkDescriptorBufferInfo   *buf_infos;
+} vc_descriptor_set_writer;
 
-    vc_descriptor_buffer_binding   *buffer_info;
-    vc_descriptor_image_binding    *image_info;
+/**
+ * @brief Writes a buffer type descriptor into the descriptor set
+ *
+ * @param ctx A vulcain context
+ * @param writer The writer
+ * @param binding The destination binding
+ * @param array_elt The destination array element
+ * @param buffer The buffer handle
+ * @param offset The offset in device units into the buffer
+ * @param range The range in device units into the buffer
+ * @param buffer_type The precise type of buffer descriptor
+ */
+void                vc_descriptor_set_writer_write_buffer(vc_ctx *ctx, vc_descriptor_set_writer *writer, u32 binding, u32 array_elt, vc_handle buffer, u64 offset, u64 range, VkDescriptorType buffer_type);
 
-} vc_descriptor_set_binding;
+/**
+ * @brief Writes an image type descriptor into the descriptor set
+ *
+ * @param ctx A vulcain context
+ * @param writer The writer
+ * @param binding The destination binding
+ * @param array_elt The destination array element
+ * @param view The image view (Can be VC_NULL_HANDLE)
+ * @param sampler A sampler (Can be VC_NULL_HANDLE)
+ * @param layout The layout in which the image will be when accessed/sampled
+ * @param image_type The precise type of image descriptor
+ */
+void                vc_descriptor_set_writer_write_image(vc_ctx *ctx, vc_descriptor_set_writer *writer, u32 binding, u32 array_elt, vc_handle view, vc_handle sampler, VkImageLayout layout, VkDescriptorType image_type);
 
-typedef struct
+
+/**
+ * @brief Updates the descriptor set with the written information
+ *
+ * @param ctx A vulcain context
+ * @param writer The writer
+ * @param set The destination set
+ */
+void                vc_descriptor_set_writer_write(vc_ctx *ctx, vc_descriptor_set_writer *writer, vc_descriptor_set set);
+
+
+// ## PIPELINES ##
+
+vc_compute_pipeline vc_compute_pipeline_create(
+    vc_ctx                     *ctx,
+
+    u8                         *code,
+    u64                         code_size,
+    char                       *entry_point,
+
+    u32                         set_layout_count,
+    vc_descriptor_set_layout   *layouts,
+
+    u32                         push_constants_count,
+    VkPushConstantRange        *push_constants
+    );
+
+typedef enum
 {
-    uint32_t                     binding_count;
-    vc_descriptor_set_binding   *bindings;
-} vc_descriptor_set_info;
+    VC_PIPELINE_COMPUTE = 1,
+    VC_PIPELINE_TYPE_MAX,
+} vc_pipeline_type;
+
 
 // ## COMMAND BUFFERS ##
 
+/**
+ * @brief Represents an opaque "Command buffer recording context". The purpose is to accelerate frequent accesses to the same object in
+ *        performance sensible operations.
+ */
 typedef uint64_t vc_cmd_record;
 
 void          vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer buffer, vc_queue queue_submit,
@@ -244,6 +371,8 @@ void vc_cmd_image_clear(vc_cmd_record record, vc_image image,
                         VkImageLayout layout,
                         VkClearColorValue clear_color,
                         VkImageSubresourceRange subres_range);
+
+
 
 #endif //__VULCAIN_H__
 

@@ -65,11 +65,21 @@ typedef struct
 
     VkImage          image;
     VmaAllocation    alloc;
+
+    VkFormat         image_format;
 } _vc_image_intern;
 
 typedef struct
 {
-    VkPipeline          pipeline;
+    VkImageView    view;
+} _vc_image_view_intern;
+
+typedef struct
+{
+    // HEADER
+    vc_pipeline_type type;
+
+    VkPipeline pipeline;
     VkPipelineLayout    layout;
 } _vc_compute_pipeline_intern;
 
@@ -81,6 +91,13 @@ typedef struct
 
 typedef struct
 {
-    VkDescriptorSetLayout layout;
+    VkDescriptorSetLayout    layout;
 } _vc_descriptor_set_layout_intern;
+
+typedef struct
+{
+    VkBuffer         buffer;
+    VmaAllocation    alloc;
+    u64              size;
+} _vc_buffer_intern;
 
