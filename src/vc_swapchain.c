@@ -6,13 +6,13 @@ void _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern 
 void _vc_swapchain_destroy(vc_ctx *ctx, _vc_swapchain_intern *s);
 
 vc_swapchain
-vc_swapchain_create(vc_ctx                                   *ctx,
-                    vc_windowing_system                       win_sys,
-                    VkImageUsageFlags                         image_usage,
-                    vc_format_query                           query,
-                    vc_swapchain_creation_callback_func       create_clbk,
-                    vc_swapchain_destruction_callback_func    destroy_clbk,
-                    void                                     *clbk_udata)
+     vc_swapchain_create(vc_ctx                  *ctx,
+                    vc_windowing_system           win_sys,
+                    VkImageUsageFlags             image_usage,
+                    vc_format_query               query,
+                    vc_swapchain_callback_func    create_clbk,
+                    vc_swapchain_callback_func    destroy_clbk,
+                    void                         *clbk_udata)
 {
     vc_debug("Creating a swapchain with windowing system '%s'.", win_sys.windowing_system_name);
 
@@ -138,7 +138,7 @@ _vc_swapchain_get_extent(vc_ctx *ctx, _vc_swapchain_intern *s, u32 *img_count)
 void _vc_swapchain_build(vc_ctx *ctx, _vc_swapchain_intern *s);
 
 void
-_vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
+     _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
 {
     vc_debug("Swapchain rebuild/build requested.");
     // Check if old swapchain already exists.
@@ -150,8 +150,9 @@ _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
         {
             vc_handles_manager_destroy_handle(&ctx->handles_manager, s->swapchain_images[i]);
         }
+        mem_free(s->swapchain_images);
         //  Call destroy callback
-        s->destruction_callback(ctx, s->clbk_udata);
+        s->destruction_callback(ctx, s->clbk_udata, s->created_info);
         //  Destroy swapchain and objs
         vkDestroySwapchainKHR(ctx->current_device, s->swapchain, NULL);
     }
@@ -173,12 +174,13 @@ _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
     s->image_extent = c_info.swapchain_extent;
 
     //  Create actual swapchain object
+    //  Create underlying objects
     _vc_swapchain_build(ctx, s);
 
     c_info.swapchain_image_count = s->image_count;
     c_info.images                = s->swapchain_images;
     vc_debug("Creation of swapchain object successful. image_count=%d", s->image_count);
-    //  Create underlying objects
+    s->created_info = c_info;
     //  Call create callback
     s->creation_callback(
         ctx,
@@ -224,7 +226,7 @@ _vc_swapchain_build(vc_ctx *ctx, _vc_swapchain_intern *s)
             .externally_managed = TRUE,
             .image              = images[i],
             .alloc              = VK_NULL_HANDLE,
-            .image_format = s->surface_format.format,
+            .image_format       = s->surface_format.format,
         };
 
         s->swapchain_images[i] = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE, &img_intern);
@@ -248,10 +250,16 @@ vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore sig
     _vc_swapchain_intern *swp = vc_handles_manager_deref(&ctx->handles_manager, swapchain);
     _vc_semaphore_intern *sem = vc_handles_manager_deref(&ctx->handles_manager, signal_semaphore);
     u32 img_id                = 0;
-    VK_CHECK(
-        vkAcquireNextImageKHR(ctx->current_device, swp->swapchain, UINT64_MAX, sem->semaphore, VK_NULL_HANDLE, &img_id),
-        "Could not acquire next image in a swapchain"
-        );
+    VkResult res              = vkAcquireNextImageKHR(ctx->current_device, swp->swapchain, UINT64_MAX, sem->semaphore, VK_NULL_HANDLE, &img_id);
+
+    if(res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR)
+    {
+        vkDeviceWaitIdle(ctx->current_device);
+        vc_debug("ACQUIRE: Resizing");
+        _vc_swapchain_rebuild(ctx, swapchain, swp);
+        VK_CHECK(vkAcquireNextImageKHR(ctx->current_device, swp->swapchain, UINT64_MAX, sem->semaphore, VK_NULL_HANDLE, &img_id), "Acquire error");
+    }
+
     return img_id;
 }
 
@@ -273,8 +281,14 @@ vc_swapchain_present_image(vc_ctx *ctx, vc_swapchain swapchain, vc_queue present
         .pImageIndices      = &image_id,
         .pResults           = &present_result,
     };
-
     vkQueuePresentKHR(que->queue, &info);
+
+    if(present_result == VK_ERROR_OUT_OF_DATE_KHR || present_result == VK_SUBOPTIMAL_KHR)
+    {
+        vkDeviceWaitIdle(ctx->current_device);
+        vc_debug("PRESENT: Resizing");
+        _vc_swapchain_rebuild(ctx, swapchain, swp);
+    }
 }
 
 vc_image

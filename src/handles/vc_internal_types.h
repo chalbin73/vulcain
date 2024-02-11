@@ -16,21 +16,23 @@
 
 typedef struct
 {
-    VkSwapchainKHR                            swapchain;
+    VkSwapchainKHR                swapchain;
 
-    VkSurfaceKHR                              surface;
-    VkSurfaceFormatKHR                        surface_format;
-    VkImageUsageFlags                         image_usage;
+    VkSurfaceKHR                  surface;
+    VkSurfaceFormatKHR            surface_format;
+    VkImageUsageFlags             image_usage;
 
-    vc_windowing_system                       windowing_system;
+    vc_windowing_system           windowing_system;
 
-    u32                                       image_count;
-    VkExtent2D                                image_extent;
-    vc_image                                 *swapchain_images;
+    u32                           image_count;
+    VkExtent2D                    image_extent;
+    vc_image                     *swapchain_images;
 
-    void                                     *clbk_udata;
-    vc_swapchain_creation_callback_func       creation_callback;
-    vc_swapchain_destruction_callback_func    destruction_callback;
+    void                         *clbk_udata;
+    vc_swapchain_callback_func    creation_callback;
+    vc_swapchain_callback_func    destruction_callback;
+
+    vc_swapchain_created_info     created_info;
 
 } _vc_swapchain_intern;
 
@@ -77,9 +79,9 @@ typedef struct
 typedef struct
 {
     // HEADER
-    vc_pipeline_type type;
+    vc_pipeline_type    type;
 
-    VkPipeline pipeline;
+    VkPipeline          pipeline;
     VkPipelineLayout    layout;
 } _vc_compute_pipeline_intern;
 

@@ -16,7 +16,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vc_priv_debug_callback(VkDebugUtilsMessageSeverit
 
 // "Dynamic" functions
 static VkResult
-vc_vkCreateDebugUtilsMessengerEXT(
+                               vc_vkCreateDebugUtilsMessengerEXT(
     VkInstance                                  instance,
     const VkDebugUtilsMessengerCreateInfoEXT   *pCreateInfo,
     const VkAllocationCallbacks                *pAllocator,
@@ -172,8 +172,14 @@ vc_ctx_create(vc_ctx                *ctx,
     // Post init
     vc_ds_alloc_create(&ctx->ds_allocator, NULL, 0, 16);
     vc_slc_create(&ctx->set_layout_cache);
-    
+
     return TRUE;
+}
+
+void
+vc_handle_destroy(vc_ctx *ctx, vc_handle hndl)
+{
+    vc_handles_manager_destroy_handle(&ctx->handles_manager, hndl);
 }
 
 void
@@ -183,6 +189,10 @@ vc_ctx_destroy(vc_ctx   *ctx)
     vkDeviceWaitIdle(ctx->current_device);
     vc_trace("Destroying all objects");
     vc_handles_manager_destroy(&ctx->handles_manager);
+
+    vc_slc_destroy(&ctx->set_layout_cache, ctx->current_device);
+    vc_ds_alloc_destroy(&ctx->ds_allocator, ctx->current_device);
+
     // Device destruction
     if(ctx->current_device != VK_NULL_HANDLE)
     {

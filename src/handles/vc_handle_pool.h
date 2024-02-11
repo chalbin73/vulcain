@@ -26,7 +26,7 @@ typedef struct
 typedef struct
 {
     void   *memory;
-    u32     head_id;
+    u64     head_id;
     u64     chunk_count;
     u64     available_count;
     u64     chunk_size;

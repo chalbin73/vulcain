@@ -133,3 +133,35 @@ vc_cmd_image_clear(vc_cmd_record record, vc_image image,
     vkCmdClearColorImage(buf->buffer, img->image, layout, &clear_color, 1, &subres_range);
 }
 
+void
+vc_cmd_dispatch_compute(vc_cmd_record record, vc_compute_pipeline pipeline, u32 groups_x, u32 groups_y, u32 groups_z)
+{
+    _vc_command_buffer_intern *buf    = (_vc_command_buffer_intern *)record;
+    _vc_compute_pipeline_intern *pipe = vc_handles_manager_deref(&buf->record_ctx->handles_manager, pipeline);
+
+    vkCmdBindPipeline(buf->buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipe->pipeline);
+    vkCmdDispatch(buf->buffer, groups_x, groups_y, groups_z);
+}
+
+void
+vc_cmd_bind_descriptor_set(vc_cmd_record record, vc_handle pipeline, vc_descriptor_set set, u32 set_dest)
+{
+    _vc_command_buffer_intern *buf   = (_vc_command_buffer_intern *)record;
+    vc_pipeline_type *pipe_i         = vc_handles_manager_deref(&buf->record_ctx->handles_manager, pipeline);
+    _vc_descriptor_set_intern *set_i = vc_handles_manager_deref(&buf->record_ctx->handles_manager, set);
+
+    VkPipelineLayout layout        = VK_NULL_HANDLE;
+    VkPipelineBindPoint bind_point = 0;
+    if(*pipe_i == VC_PIPELINE_COMPUTE)
+    {
+        bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+        layout     = ( (_vc_compute_pipeline_intern *)pipe_i )->layout;
+    }
+    else
+    {
+        return;
+    }
+
+    vkCmdBindDescriptorSets(buf->buffer, bind_point, layout, set_dest, 1, &set_i->set, 0, NULL);
+}
+

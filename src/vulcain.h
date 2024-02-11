@@ -106,22 +106,22 @@ typedef struct
     vc_image       *images;
 } vc_swapchain_created_info;
 
-typedef void (*vc_swapchain_creation_callback_func)(vc_ctx *ctx, void *udata, vc_swapchain_created_info);
-typedef void (*vc_swapchain_destruction_callback_func)(vc_ctx *ctx, void *udata);
+typedef void (*vc_swapchain_callback_func)(vc_ctx *ctx, void *udata, vc_swapchain_created_info);
 
 typedef u32 vc_swpchn_img_id;
 
-vc_swapchain vc_swapchain_create(vc_ctx                                   *ctx,
-                                 vc_windowing_system                       win_sys,
-                                 VkImageUsageFlags                         image_usage,
-                                 vc_format_query                           query,
-                                 vc_swapchain_creation_callback_func       create_clbk,
-                                 vc_swapchain_destruction_callback_func    destroy_clbk,
-                                 void                                     *clbk_udata);
+vc_swapchain vc_swapchain_create(vc_ctx                       *ctx,
+                                 vc_windowing_system           win_sys,
+                                 VkImageUsageFlags             image_usage,
+                                 vc_format_query               query,
+                                 vc_swapchain_callback_func    create_clbk,
+                                 vc_swapchain_callback_func    destroy_clbk,
+                                 void                         *clbk_udata);
 
 void              vc_swapchain_present_image(vc_ctx *ctx, vc_swapchain swapchain, vc_queue presentation_queue, vc_semaphore wait_semaphore, vc_swpchn_img_id image_id);
 vc_swpchn_img_id  vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore signal_semaphore);
 vc_image          vc_swapchain_get_image(vc_ctx *ctx, vc_swapchain swapchain, vc_swpchn_img_id index);
+void              vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 
 // ## COMMAND BUFFERS/POOLS ##
 
@@ -373,6 +373,8 @@ void vc_cmd_image_clear(vc_cmd_record record, vc_image image,
                         VkImageSubresourceRange subres_range);
 
 
+void vc_cmd_bind_descriptor_set(vc_cmd_record record, vc_handle pipeline, vc_descriptor_set set, u32 set_dest);
+void vc_cmd_dispatch_compute(vc_cmd_record record, vc_compute_pipeline pipeline, u32 groups_x, u32 groups_y, u32 groups_z);
 
 #endif //__VULCAIN_H__
 

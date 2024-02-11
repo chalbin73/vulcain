@@ -54,17 +54,23 @@ vc_handle_pool_alloc(vc_handle_pool   *pool)
 {
     if(pool->chunk_count == 0 || pool->memory == NULL)
     {
-        vc_error("Pool allocation called on invalid pool. Aborting.");
+        vc_error("ALLOC: Pool allocation called on invalid pool. Aborting.");
         return 0;
     }
     if(pool->available_count == 0)
     {
-        vc_warn("Full pull, allocation was requested, can't fullfill.");
+        vc_warn("ALLOC: Full pool, allocation was requested, can't fullfill.");
         return 0; // Maybe handle resize here
     }
 
     // Grab new zone from head
-    u32 new_id = pool->head_id;
+    u64 new_id = pool->head_id;
+
+    if(new_id == _VC_HANDLE_POOL_NULL_NEXT)
+    {
+        vc_fatal("ALLOC: Full pool, available_count error.");
+        return 0;
+    }
 
     // Dereference pool
     vc_handle_pool_chunk_header *new_hdr = (vc_handle_pool_chunk_header *)( ( (u8 *)pool->memory ) + (new_id * pool->chunk_size) );
@@ -95,7 +101,7 @@ vc_handle_pool_deref(vc_handle_pool *pool, u32 id)
 {
     if(id == 0)
     {
-        vc_error("Attempted to dereference a Null (0) handle id.");
+        vc_error("DEREF: Attempted to dereference a Null (0) handle id.");
         return NULL;
     }
     vc_handle_mask mask =
@@ -108,13 +114,13 @@ vc_handle_pool_deref(vc_handle_pool *pool, u32 id)
 
     if(!hdr->used)
     {
-        vc_error("Attempted to access a free ressource. Dangling access is possible.");
+        vc_error("DEREF: Attempted to access a free ressource. Dangling access is possible.");
         return NULL;
     }
 
     if(hdr->chunk_counter != mask.counter)
     {
-        vc_error("Handle (id=0x%x) counter mismatch with managed ressource (%d != %d). This indicate a dangling access.", id, hdr->chunk_counter, mask.counter);
+        vc_error("DEREF: Handle (id=0x%x) counter mismatch with managed ressource (%d != %d). This indicate a dangling access.", id, hdr->chunk_counter, mask.counter);
         return NULL;
     }
 
@@ -126,7 +132,7 @@ vc_handle_pool_dealloc(vc_handle_pool *pool, u32 id)
 {
     if(id == 0)
     {
-        vc_error("Attempted to dealloc a Null (0) handle id.");
+        vc_error("DEALLOC: Attempted to dealloc a Null (0) handle id.");
         return;
     }
     vc_handle_mask mask =
@@ -139,7 +145,7 @@ vc_handle_pool_dealloc(vc_handle_pool *pool, u32 id)
 
     if(hdr->chunk_counter != mask.counter)
     {
-        vc_error("Handle counter mismatch with managed ressource. This indicate a dangling deallocation.");
+        vc_error("DEALLOC: Handle counter mismatch with managed ressource. This indicate a dangling deallocation.");
         return;
     }
 

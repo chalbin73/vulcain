@@ -91,7 +91,7 @@ vc_slc_get(vc_set_layout_cache *cache, VkDevice dev, VkDescriptorSetLayoutCreate
     VkDescriptorSetLayoutBinding *bindings = darray_create(VkDescriptorSetLayoutBinding);
     for(u32 i = 0; i < info.bindingCount; i++)
     {
-        darray_push(bindings, info.pBindings[i]);
+        darray_push(bindings, (VkDescriptorSetLayoutBinding)info.pBindings[i]);
     }
     darray_qsort(bindings, _vc_slc_binding_comp);
     info.pBindings = bindings;

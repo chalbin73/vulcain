@@ -47,7 +47,7 @@ VkDescriptorPool
 _vc_ds_get_pool(VkDevice dev, vc_descriptor_set_allocator *allocator)
 {
     // Check if pool is available in ready pools
-    if(darray_create(allocator->ready_pools) > 0)
+    if(darray_length(allocator->ready_pools) > 0)
     {
         VkDescriptorPool pool = VK_NULL_HANDLE;
         darray_pop(allocator->ready_pools, &pool);

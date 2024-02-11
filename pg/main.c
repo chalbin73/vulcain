@@ -5,6 +5,11 @@
 #define VC_WS_GLFW
 #include <vulcain/win_sys/vc_glfw.h>
 
+vc_descriptor_set_layout pipe_layout = VC_NULL_HANDLE;
+
+vc_descriptor_set *image_sets;
+vc_image_view *image_views;
+
 uint64_t
 device_score(void *ud, VkPhysicalDevice phy)
 {
@@ -16,13 +21,37 @@ GLFWwindow *window;
 void
 create_cbk(vc_ctx *ctx, void *udata, vc_swapchain_created_info info)
 {
-    vc_info("SWAPCHAIN CREATED !!!");
+    return;
+    image_views = mem_allocate(sizeof(vc_image_view) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
+    image_sets  = mem_allocate(sizeof(vc_descriptor_set) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
+
+    for(u32 i = 0; i < info.swapchain_image_count; i++)
+    {
+        image_sets[i] = vc_descriptor_set_allocate(ctx, pipe_layout);
+
+        vc_descriptor_set_writer writer =
+        {
+            0
+        };
+
+        image_views[i] = vc_image_view_create(ctx, info.images[i], VK_IMAGE_VIEW_TYPE_2D, VC_COMP_MAP_ID, VC_IMG_SUBRES_COLOR_1);
+        vc_descriptor_set_writer_write_image(ctx, &writer, 0, 0, image_views[i], VC_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        vc_descriptor_set_writer_write(ctx, &writer, image_sets[i]);
+    }
 }
 
 void
-destr_cbk(vc_ctx *ctx, void *udata)
+destr_cbk(vc_ctx *ctx, void *udata, vc_swapchain_created_info info)
 {
-    vc_info("SWAPCHAIN DESTROYED !!!");
+    return;
+    for(u32 i = 0; i < info.swapchain_image_count; i++)
+    {
+        vc_handle_destroy(ctx, image_views[i]);
+        vc_handle_destroy(ctx, image_sets[i]);
+    }
+
+    mem_free(image_views);
+    mem_free(image_sets);
 }
 
 int
@@ -30,6 +59,7 @@ main(int argc, char **argv)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     window = glfwCreateWindow(1920, 1080, "Hello", NULL, NULL);
     glfwShowWindow(window);
 
@@ -74,10 +104,26 @@ main(int argc, char **argv)
     vc_device_builder_end(b);
     (void)comp_queue;
 
+    /*
+       {
+        vc_descriptor_set_layout_builder builder =
+        {
+            0
+        };
+        vc_descriptor_set_layout_builder_add_binding(&builder, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
+        pipe_layout = vc_descriptor_set_layout_builder_build(&ctx, &builder, 0);
+       }
+
+       u64 code_size            = 0;
+       u8 *code                 = fio_read_whole_file("pg_shaders/test.comp.spv", &code_size);
+       vc_compute_pipeline pipe = vc_compute_pipeline_create(&ctx, code, code_size, "main", 1, &pipe_layout, 0, NULL);
+       (void)pipe;
+     */
+
     vc_swapchain swapchain = vc_swapchain_create(
         &ctx,
         glfw_ws,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT,
         (vc_format_query)
         {
             .required_optimal_tiling_features = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,
@@ -92,6 +138,8 @@ main(int argc, char **argv)
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         vc_command_pool_create(&ctx, comp_queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
         );
+
+
 
     vc_semaphore sem     = vc_semaphore_create(&ctx);
     vc_semaphore sig_sem = vc_semaphore_create(&ctx);
@@ -116,11 +164,11 @@ main(int argc, char **argv)
             rec,
             vc_swapchain_get_image(&ctx, swapchain, id),
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_ACCESS_NONE,
-            VK_ACCESS_MEMORY_WRITE_BIT,
+            VK_ACCESS_SHADER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            VK_IMAGE_LAYOUT_GENERAL,
             (VkImageSubresourceRange)
             {
                 .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -133,11 +181,18 @@ main(int argc, char **argv)
             VC_NULL_HANDLE
             );
 
-        vc_cmd_image_clear(
+        //vc_cmd_bind_descriptor_set(rec, pipe, image_sets[id], 0);
+        //vc_cmd_dispatch_compute(rec, pipe, 1920 / 16, 1080 / 16, 1);
+
+        vc_cmd_image_barrier(
             rec,
             vc_swapchain_get_image(&ctx, swapchain, id),
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            VK_ACCESS_SHADER_WRITE_BIT,
+            VK_ACCESS_NONE,
+            VK_IMAGE_LAYOUT_GENERAL,
             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            (VkClearColorValue){ 0 },
             (VkImageSubresourceRange)
             {
                 .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -145,7 +200,9 @@ main(int argc, char **argv)
                 .levelCount     = 1,
                 .baseMipLevel   = 0,
                 .baseArrayLayer = 0
-            }
+            },
+            VC_NULL_HANDLE,
+            VC_NULL_HANDLE
             );
 
         vc_command_buffer_end(rec);

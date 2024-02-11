@@ -76,7 +76,7 @@ vc_compute_pipeline_create(
     VkComputePipelineCreateInfo comp_ci =
     {
         .sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-        .flags              = NULL,
+        .flags              = 0,
         .layout             = comp_i.layout,
         .basePipelineHandle = VK_NULL_HANDLE,
         .stage              = comp_stage,
