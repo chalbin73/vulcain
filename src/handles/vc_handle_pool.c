@@ -76,7 +76,7 @@ vc_handle_pool_alloc(vc_handle_pool   *pool)
     vc_handle_pool_chunk_header *new_hdr = (vc_handle_pool_chunk_header *)( ( (u8 *)pool->memory ) + (new_id * pool->chunk_size) );
     if(new_hdr->used)
     {
-        vc_fatal("Pool in free list is used.");
+        vc_fatal("ALLOC: Pool in free list is used.");
         return 0;
     }
 
@@ -141,7 +141,7 @@ vc_handle_pool_dealloc(vc_handle_pool *pool, u32 id)
     };
     mask.hndl_id = id;
 
-    vc_handle_pool_chunk_header *hdr = pool->memory + (pool->chunk_count * mask.index);
+    vc_handle_pool_chunk_header *hdr = (vc_handle_pool_chunk_header *)( ( (u8 *)pool->memory ) + (pool->chunk_size * mask.index) );
 
     if(hdr->chunk_counter != mask.counter)
     {

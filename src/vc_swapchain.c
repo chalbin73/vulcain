@@ -6,7 +6,7 @@ void _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern 
 void _vc_swapchain_destroy(vc_ctx *ctx, _vc_swapchain_intern *s);
 
 vc_swapchain
-     vc_swapchain_create(vc_ctx                  *ctx,
+vc_swapchain_create(vc_ctx                       *ctx,
                     vc_windowing_system           win_sys,
                     VkImageUsageFlags             image_usage,
                     vc_format_query               query,
@@ -138,7 +138,7 @@ _vc_swapchain_get_extent(vc_ctx *ctx, _vc_swapchain_intern *s, u32 *img_count)
 void _vc_swapchain_build(vc_ctx *ctx, _vc_swapchain_intern *s);
 
 void
-     _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
+_vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
 {
     vc_debug("Swapchain rebuild/build requested.");
     // Check if old swapchain already exists.
