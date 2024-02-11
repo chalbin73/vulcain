@@ -154,6 +154,7 @@ _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
         //  Call destroy callback
         s->destruction_callback(ctx, s->clbk_udata, s->created_info);
         //  Destroy swapchain and objs
+        vc_handle_destroy(ctx, s->acquire_semaphore);
         vkDestroySwapchainKHR(ctx->current_device, s->swapchain, NULL);
     }
 
@@ -176,6 +177,8 @@ _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
     //  Create actual swapchain object
     //  Create underlying objects
     _vc_swapchain_build(ctx, s);
+
+    s->acquire_semaphore = vc_semaphore_create(ctx);
 
     c_info.swapchain_image_count = s->image_count;
     c_info.images                = s->swapchain_images;
@@ -245,10 +248,10 @@ _vc_swapchain_destroy(vc_ctx *ctx, _vc_swapchain_intern *s)
 }
 
 vc_swpchn_img_id
-vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore signal_semaphore)
+vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore *signal_semaphore)
 {
     _vc_swapchain_intern *swp = vc_handles_manager_deref(&ctx->handles_manager, swapchain);
-    _vc_semaphore_intern *sem = vc_handles_manager_deref(&ctx->handles_manager, signal_semaphore);
+    _vc_semaphore_intern *sem = vc_handles_manager_deref(&ctx->handles_manager, swp->acquire_semaphore);
     u32 img_id                = 0;
     VkResult res              = vkAcquireNextImageKHR(ctx->current_device, swp->swapchain, UINT64_MAX, sem->semaphore, VK_NULL_HANDLE, &img_id);
 
@@ -257,7 +260,13 @@ vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore sig
         vkDeviceWaitIdle(ctx->current_device);
         vc_debug("ACQUIRE: Resizing");
         _vc_swapchain_rebuild(ctx, swapchain, swp);
+        sem = vc_handles_manager_deref(&ctx->handles_manager, swp->acquire_semaphore);
         VK_CHECK(vkAcquireNextImageKHR(ctx->current_device, swp->swapchain, UINT64_MAX, sem->semaphore, VK_NULL_HANDLE, &img_id), "Acquire error");
+    }
+
+    if(signal_semaphore)
+    {
+        *signal_semaphore = swp->acquire_semaphore;
     }
 
     return img_id;

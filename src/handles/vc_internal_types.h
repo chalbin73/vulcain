@@ -33,6 +33,7 @@ typedef struct
     vc_swapchain_callback_func    destruction_callback;
 
     vc_swapchain_created_info     created_info;
+    vc_semaphore                  acquire_semaphore; // Managed by swapchain because of recreation
 
 } _vc_swapchain_intern;
 

@@ -6,7 +6,10 @@
 void
 _vc_image_destroy(vc_ctx *ctx, _vc_image_intern *i)
 {
-    vmaDestroyImage(ctx->main_allocator, i->image, i->alloc);
+    if(!i->externally_managed)
+    {
+        vmaDestroyImage(ctx->main_allocator, i->image, i->alloc);
+    }
 }
 
 void
@@ -80,6 +83,7 @@ vc_image_allocate(vc_ctx *ctx, vc_image_create_info create_info)
     VK_CHECKH(vmaCreateImage(ctx->main_allocator, &img_ci, &alloc_ci, &img.image, &img.alloc, NULL), "Could not allocate an image");
 
     vc_image hndl = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE, &img);
+    vc_handles_manager_set_destroy_function(&ctx->handles_manager, VC_HANDLE_IMAGE, (vc_handle_destroy_func)_vc_image_destroy);
 
     return hndl;
 }
@@ -108,6 +112,7 @@ vc_image_view_create(vc_ctx *ctx, vc_image image, VkImageViewType type, VkCompon
     VK_CHECKH(vkCreateImageView(ctx->current_device, &info, NULL, &view_i.view), "Could not create an image view.");
 
     vc_image_view hndl = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE_VIEW, &view_i);
+    vc_handles_manager_set_destroy_function(&ctx->handles_manager, VC_HANDLE_IMAGE_VIEW, (vc_handle_destroy_func)_vc_image_view_destroy);
 
     return hndl;
 }

@@ -141,12 +141,14 @@ vc_ds_alloc_allocate(vc_descriptor_set_allocator *allocator, VkDevice dev, VkDes
 void
 vc_ds_alloc_destroy(vc_descriptor_set_allocator *allocator, VkDevice dev)
 {
-    for(u32 i = 0; darray_length(allocator->ready_pools); i++)
+    u32 ready_pool_length = darray_length(allocator->ready_pools);
+    for(u32 i = 0; i < ready_pool_length; i++)
     {
         vkDestroyDescriptorPool(dev, allocator->ready_pools[i], NULL);
     }
 
-    for(u32 i = 0; darray_length(allocator->full_pools); i++)
+    u32 full_pool_length = darray_length(allocator->full_pools);
+    for(u32 i = 0; i < full_pool_length; i++)
     {
         vkDestroyDescriptorPool(dev, allocator->full_pools[i], NULL);
     }

@@ -9,6 +9,7 @@ vc_descriptor_set_layout pipe_layout = VC_NULL_HANDLE;
 
 vc_descriptor_set *image_sets;
 vc_image_view *image_views;
+vc_semaphore sig_sem;
 
 uint64_t
 device_score(void *ud, VkPhysicalDevice phy)
@@ -21,7 +22,6 @@ GLFWwindow *window;
 void
 create_cbk(vc_ctx *ctx, void *udata, vc_swapchain_created_info info)
 {
-    return;
     image_views = mem_allocate(sizeof(vc_image_view) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
     image_sets  = mem_allocate(sizeof(vc_descriptor_set) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
 
@@ -43,7 +43,6 @@ create_cbk(vc_ctx *ctx, void *udata, vc_swapchain_created_info info)
 void
 destr_cbk(vc_ctx *ctx, void *udata, vc_swapchain_created_info info)
 {
-    return;
     for(u32 i = 0; i < info.swapchain_image_count; i++)
     {
         vc_handle_destroy(ctx, image_views[i]);
@@ -60,7 +59,7 @@ main(int argc, char **argv)
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    window = glfwCreateWindow(1920, 1080, "Hello", NULL, NULL);
+    window = glfwCreateWindow(1920, 1080, "Vulcain", NULL, NULL);
     glfwShowWindow(window);
 
     vc_ctx ctx =
@@ -104,21 +103,19 @@ main(int argc, char **argv)
     vc_device_builder_end(b);
     (void)comp_queue;
 
-    /*
-       {
+    {
         vc_descriptor_set_layout_builder builder =
         {
             0
         };
         vc_descriptor_set_layout_builder_add_binding(&builder, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
         pipe_layout = vc_descriptor_set_layout_builder_build(&ctx, &builder, 0);
-       }
+    }
 
-       u64 code_size            = 0;
-       u8 *code                 = fio_read_whole_file("pg_shaders/test.comp.spv", &code_size);
-       vc_compute_pipeline pipe = vc_compute_pipeline_create(&ctx, code, code_size, "main", 1, &pipe_layout, 0, NULL);
-       (void)pipe;
-     */
+    u64 code_size            = 0;
+    u8 *code                 = fio_read_whole_file("pg_shaders/test.comp.spv", &code_size);
+    vc_compute_pipeline pipe = vc_compute_pipeline_create(&ctx, code, code_size, "main", 1, &pipe_layout, 0, NULL);
+    (void)pipe;
 
     vc_swapchain swapchain = vc_swapchain_create(
         &ctx,
@@ -139,23 +136,21 @@ main(int argc, char **argv)
         vc_command_pool_create(&ctx, comp_queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
         );
 
-
-
-    vc_semaphore sem     = vc_semaphore_create(&ctx);
-    vc_semaphore sig_sem = vc_semaphore_create(&ctx);
+    sig_sem = vc_semaphore_create(&ctx);
 
     u64 prev_time = platform_millis();
     while( !glfwWindowShouldClose(window) )
     {
         u64 now_time = platform_millis();
-        if(now_time - prev_time < 100)
+        if(now_time - prev_time < 16)
         {
             continue;
         }
         prev_time = now_time;
 
+        vc_semaphore sem;
         vc_device_wait_idle(&ctx);
-        vc_swpchn_img_id id = vc_swapchain_acquire_image(&ctx, swapchain, sem);
+        vc_swpchn_img_id id = vc_swapchain_acquire_image(&ctx, swapchain, &sem);
 
         //puts("Beginning");
         vc_cmd_record rec = vc_command_buffer_begin(&ctx, comp_buf, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -181,8 +176,8 @@ main(int argc, char **argv)
             VC_NULL_HANDLE
             );
 
-        //vc_cmd_bind_descriptor_set(rec, pipe, image_sets[id], 0);
-        //vc_cmd_dispatch_compute(rec, pipe, 1920 / 16, 1080 / 16, 1);
+        vc_cmd_bind_descriptor_set(rec, pipe, image_sets[id], 0);
+        vc_cmd_dispatch_compute(rec, pipe, 1920 / 16, 1080 / 16, 1);
 
         vc_cmd_image_barrier(
             rec,
@@ -211,7 +206,6 @@ main(int argc, char **argv)
         vc_swapchain_present_image(&ctx, swapchain, pres_queue, sig_sem, id);
 
         glfwPollEvents();
-        //       break;
     }
     printf("End !!\n");
     vc_ctx_destroy(&ctx);

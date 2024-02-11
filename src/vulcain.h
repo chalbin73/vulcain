@@ -119,7 +119,8 @@ vc_swapchain vc_swapchain_create(vc_ctx                       *ctx,
                                  void                         *clbk_udata);
 
 void              vc_swapchain_present_image(vc_ctx *ctx, vc_swapchain swapchain, vc_queue presentation_queue, vc_semaphore wait_semaphore, vc_swpchn_img_id image_id);
-vc_swpchn_img_id  vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore signal_semaphore);
+vc_swpchn_img_id
+vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore *signal_semaphore);
 vc_image          vc_swapchain_get_image(vc_ctx *ctx, vc_swapchain swapchain, vc_swpchn_img_id index);
 void              vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 
