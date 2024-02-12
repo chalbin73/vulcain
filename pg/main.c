@@ -11,6 +11,8 @@ vc_descriptor_set *image_sets;
 vc_image_view *image_views;
 vc_semaphore sig_sem;
 
+i32 size[2];
+
 uint64_t
 device_score(void *ud, VkPhysicalDevice phy)
 {
@@ -114,7 +116,21 @@ main(int argc, char **argv)
 
     u64 code_size            = 0;
     u8 *code                 = fio_read_whole_file("pg_shaders/test.comp.spv", &code_size);
-    vc_compute_pipeline pipe = vc_compute_pipeline_create(&ctx, code, code_size, "main", 1, &pipe_layout, 0, NULL);
+    vc_compute_pipeline pipe = vc_compute_pipeline_create(
+        &ctx,
+        code,
+        code_size,
+        "main",
+        1,
+        &pipe_layout,
+        1,
+        &(VkPushConstantRange)
+        {
+            .size       = sizeof(size),
+            .offset     = 0,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        }
+        );
     (void)pipe;
 
     vc_swapchain swapchain = vc_swapchain_create(
@@ -148,6 +164,8 @@ main(int argc, char **argv)
         }
         prev_time = now_time;
 
+        glfwGetFramebufferSize(window, &size[0], &size[1]);
+
         vc_semaphore sem;
         vc_device_wait_idle(&ctx);
         vc_swpchn_img_id id = vc_swapchain_acquire_image(&ctx, swapchain, &sem);
@@ -177,6 +195,7 @@ main(int argc, char **argv)
             );
 
         vc_cmd_bind_descriptor_set(rec, pipe, image_sets[id], 0);
+        vc_cmd_push_constants(rec, pipe, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(size), size);
         vc_cmd_dispatch_compute(rec, pipe, 1920 / 16, 1080 / 16, 1);
 
         vc_cmd_image_barrier(

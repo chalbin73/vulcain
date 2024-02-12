@@ -376,6 +376,8 @@ void vc_cmd_image_clear(vc_cmd_record record, vc_image image,
 
 void vc_cmd_bind_descriptor_set(vc_cmd_record record, vc_handle pipeline, vc_descriptor_set set, u32 set_dest);
 void vc_cmd_dispatch_compute(vc_cmd_record record, vc_compute_pipeline pipeline, u32 groups_x, u32 groups_y, u32 groups_z);
+void
+vc_cmd_push_constants(vc_cmd_record record, vc_handle pipeline, VkShaderStageFlags stage, u32 offset, u32 size, void *data);
 
 #endif //__VULCAIN_H__
 

@@ -15,25 +15,28 @@ vec2 comp_mult(vec2 a, vec2 b)
     );
 }
 
-#define WIDTH 1362
-#define HEIGHT 720
+layout( push_constant ) uniform constants
+{
+    int WIDTH;
+    int HEIGHT;
+} PC;
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
     uvec2 pos = gl_GlobalInvocationID.xy;
-    if(pos.x > WIDTH || pos.y > HEIGHT)
+    if(pos.x > PC.WIDTH || pos.y > PC.HEIGHT)
     {
         return;
     }
 
     vec2 comp_pos = vec2(
-        map(pos.x, 0, WIDTH, -2.2f, 2.2f),
-        map(pos.y, 0, HEIGHT, -1.2f, 1.2f)
+        map(pos.x, 0, PC.WIDTH, -2.2f, 2.2f),
+        map(pos.y, 0, PC.HEIGHT, -1.2f, 1.2f)
     );
 
     vec2 z = comp_pos;
-    comp_pos = vec2(-0.123, -0.745);
+    //comp_pos = vec2(-0.123, -0.745);
     int i = 0;
     for(i = 0; i < 100; i ++)
     {

@@ -165,3 +165,21 @@ vc_cmd_bind_descriptor_set(vc_cmd_record record, vc_handle pipeline, vc_descript
     vkCmdBindDescriptorSets(buf->buffer, bind_point, layout, set_dest, 1, &set_i->set, 0, NULL);
 }
 
+void
+vc_cmd_push_constants(vc_cmd_record record, vc_handle pipeline, VkShaderStageFlags stage, u32 offset, u32 size, void *data)
+{
+    _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
+    vc_pipeline_type *pipe_i       = vc_handles_manager_deref(&buf->record_ctx->handles_manager, pipeline);
+
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    if(*pipe_i == VC_PIPELINE_COMPUTE)
+    {
+        layout = ( (_vc_compute_pipeline_intern *)pipe_i )->layout;
+    }
+    else
+    {
+        return;
+    }
+    vkCmdPushConstants(buf->buffer, layout, stage, offset, size, data);
+}
+
