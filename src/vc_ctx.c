@@ -173,6 +173,13 @@ vc_ctx_create(vc_ctx                *ctx,
     vc_ds_alloc_create(&ctx->ds_allocator, NULL, 0, 16);
     vc_slc_create(&ctx->set_layout_cache);
 
+    // Features
+    
+    if(app_info.apiVersion >= VK_MAKE_VERSION(1, 3, 0))
+    {
+        ctx->supported_features.dynamic_rendering = TRUE;
+    }
+
     return TRUE;
 }
 
@@ -187,6 +194,13 @@ vc_ctx_destroy(vc_ctx   *ctx)
 {
     vc_info("Destroying a vulkan context");
     vkDeviceWaitIdle(ctx->current_device);
+
+    // Imgui
+    if(ctx->imgui_ctx)
+    {
+        vc_imgui_cleanup(ctx);
+    }
+
     vc_trace("Destroying all objects");
     vc_handles_manager_destroy(&ctx->handles_manager);
 

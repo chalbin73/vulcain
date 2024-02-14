@@ -33,6 +33,11 @@
 #define vc_fatal(fmt, ...) \
         fl_log(FATAL, __FILE__, __LINE__, fmt, ## __VA_ARGS__);
 
+// Represents various features which need to be checked before use.
+typedef struct
+{
+    b8    dynamic_rendering;
+} vc_ctx_supported_features;
 
 // Welcome to vulcain
 typedef struct
@@ -55,6 +60,11 @@ typedef struct
     // TODO: Make those two invisible to the outside world
     vc_descriptor_set_allocator    ds_allocator;
     vc_set_layout_cache            set_layout_cache;
+
+    vc_ctx_supported_features      supported_features;
+
+    // Optional features
+    void                          *imgui_ctx;
 } vc_ctx;
 
 typedef struct
@@ -119,8 +129,7 @@ vc_swapchain vc_swapchain_create(vc_ctx                       *ctx,
                                  void                         *clbk_udata);
 
 void              vc_swapchain_present_image(vc_ctx *ctx, vc_swapchain swapchain, vc_queue presentation_queue, vc_semaphore wait_semaphore, vc_swpchn_img_id image_id);
-vc_swpchn_img_id
-vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore *signal_semaphore);
+vc_swpchn_img_id  vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore *signal_semaphore);
 vc_image          vc_swapchain_get_image(vc_ctx *ctx, vc_swapchain swapchain, vc_swpchn_img_id index);
 void              vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 
@@ -294,7 +303,7 @@ typedef struct
  * @param range The range in device units into the buffer
  * @param buffer_type The precise type of buffer descriptor
  */
-void                vc_descriptor_set_writer_write_buffer(vc_ctx *ctx, vc_descriptor_set_writer *writer, u32 binding, u32 array_elt, vc_handle buffer, u64 offset, u64 range, VkDescriptorType buffer_type);
+void vc_descriptor_set_writer_write_buffer(vc_ctx *ctx, vc_descriptor_set_writer *writer, u32 binding, u32 array_elt, vc_handle buffer, u64 offset, u64 range, VkDescriptorType buffer_type);
 
 /**
  * @brief Writes an image type descriptor into the descriptor set
@@ -308,7 +317,7 @@ void                vc_descriptor_set_writer_write_buffer(vc_ctx *ctx, vc_descri
  * @param layout The layout in which the image will be when accessed/sampled
  * @param image_type The precise type of image descriptor
  */
-void                vc_descriptor_set_writer_write_image(vc_ctx *ctx, vc_descriptor_set_writer *writer, u32 binding, u32 array_elt, vc_handle view, vc_handle sampler, VkImageLayout layout, VkDescriptorType image_type);
+void vc_descriptor_set_writer_write_image(vc_ctx *ctx, vc_descriptor_set_writer *writer, u32 binding, u32 array_elt, vc_handle view, vc_handle sampler, VkImageLayout layout, VkDescriptorType image_type);
 
 
 /**
@@ -318,38 +327,174 @@ void                vc_descriptor_set_writer_write_image(vc_ctx *ctx, vc_descrip
  * @param writer The writer
  * @param set The destination set
  */
-void                vc_descriptor_set_writer_write(vc_ctx *ctx, vc_descriptor_set_writer *writer, vc_descriptor_set set);
+void vc_descriptor_set_writer_write(vc_ctx *ctx, vc_descriptor_set_writer *writer, vc_descriptor_set set);
 
 
 // ## PIPELINES ##
 
+typedef struct
+{
+    u32                         set_layout_count;
+    vc_descriptor_set_layout   *set_layouts;
+
+    u32                         push_constants_count;
+    VkPushConstantRange        *push_constants;
+} vc_pipeline_layout_info;
+
+typedef struct
+{
+    u8           *vertex_code;
+    u64           vertex_code_size;
+    const char   *vertex_entry_point;
+
+    u8           *fragment_code;
+    u64           fragment_code_size;
+    const char   *fragment_entry_point;
+} vc_gfx_pipeline_code_info;
+
+// - Vertex bindings
+typedef struct
+{
+    u32         location;
+    VkFormat    format;
+    u32         offset;
+} vc_vertex_binding_attribute;
+
+typedef struct
+{
+    u32                            binding;
+    u32                            stride;
+    u32                            attribute_count;
+    vc_vertex_binding_attribute   *attributes;
+
+    VkVertexInputRate              input_rate;
+} vc_vertex_binding;
+
+typedef struct
+{
+
+    /** @brief The code of the programmable pipeline stages */
+    vc_gfx_pipeline_code_info              shader_code;
+
+    vc_pipeline_layout_info                layout_info;
+
+    // Assembly state
+    u32                                    vertex_binding_count;
+    vc_vertex_binding                     *vertex_bindings;
+
+    VkPrimitiveTopology                    topology;
+
+    // Ignored if dynamic
+    u32                                    viewport_scissor_count;
+    VkViewport                            *viewports;
+    VkRect2D                              *scissors;
+
+    // Depth state
+    b8                                     depth_test;
+    b8                                     depth_write;
+    VkCompareOp                            depth_compare_op;
+    b8                                     depth_bound_test_enable;
+    f32                                    depth_bounds_min;
+    f32                                    depth_bounds_max;
+
+    // Stencil test
+    b8                                     stencil_test;
+    VkStencilOpState                       front_faces_stencil_op;
+    VkStencilOpState                       back_faces_stencil_op;
+
+    b8                                     enable_depth_clamp;
+    VkPolygonMode                          polygon_mode;
+    VkCullModeFlagBits                     cull_mode;
+    VkFrontFace                            front_face;
+    f32                                    line_width;
+
+    b8                                     enable_depth_bias;
+    f32                                    depth_bias_clamp;
+    f32                                    depth_bias_constant;
+    f32                                    depth_bias_slope;
+
+    // Multisampling
+    VkSampleCountFlagBits                  sample_count;
+    b8                                     sample_shading;
+    f32                                    sample_shading_min_factor;
+
+    // Attachment state
+    u32                                    attachment_count;
+    VkPipelineColorBlendAttachmentState   *attachment_blends;
+    f32                                    blend_constants[4];
+
+    // Dynamic states
+    u32                                    dynamic_state_count;
+    VkDynamicState                        *dynamic_states;
+
+} vc_graphics_pipeline_desc;
+
+// For dynamic rendering
+typedef struct
+{
+    uint32_t    view_mask;
+    uint32_t    color_attachment_count;
+    VkFormat   *color_attachment_formats;
+    VkFormat    depth_attachment_format;
+    VkFormat    stencil_attachment_format;
+} vc_pipeline_rendering_info;
+
+vc_gfx_pipeline vc_gfx_pipeline_dynamic_create(
+    vc_ctx                       *ctx,
+    vc_graphics_pipeline_desc     desc,
+    vc_pipeline_rendering_info    dyn_info
+    );
+
 vc_compute_pipeline vc_compute_pipeline_create(
-    vc_ctx                     *ctx,
+    vc_ctx                    *ctx,
 
-    u8                         *code,
-    u64                         code_size,
-    char                       *entry_point,
+    u8                        *code,
+    u64                        code_size,
+    char                      *entry_point,
 
-    u32                         set_layout_count,
-    vc_descriptor_set_layout   *layouts,
-
-    u32                         push_constants_count,
-    VkPushConstantRange        *push_constants
+    vc_pipeline_layout_info    layout_info
     );
 
 typedef enum
 {
     VC_PIPELINE_COMPUTE = 1,
+    VC_PIPELINE_GRAPHICS,
     VC_PIPELINE_TYPE_MAX,
 } vc_pipeline_type;
 
-
-// ## COMMAND BUFFERS ##
+// ## DYNAMIC RENDERING ##
 
 /**
  * @brief Represents an opaque "Command buffer recording context". The purpose is to accelerate frequent accesses to the same object in
  *        performance sensible operations.
  */
+
+typedef struct
+{
+    vc_image_view            image_view;
+    VkImageLayout            image_layout;
+    VkResolveModeFlagBits    resolve_mode;
+    vc_image_view            resolve_image_view;
+    VkImageLayout            resolve_image_layout;
+    VkAttachmentLoadOp       load_op;
+    VkAttachmentStoreOp      store_op;
+    VkClearValue             clear_value;
+} vc_rendering_attachment_info;
+
+typedef struct
+{
+    VkRenderingFlags                flags;
+    VkRect2D                        render_area;
+    u32                             layer_count;
+    u32                             view_mask;
+    u32                             color_attachments_count;
+    vc_rendering_attachment_info   *color_attachments;
+    vc_rendering_attachment_info   *depth_attachment;
+    vc_rendering_attachment_info   *stencil_attachment;
+} vc_rendering_info;
+
+
+// ## COMMAND BUFFERS ##
 typedef uint64_t vc_cmd_record;
 
 void          vc_command_buffer_submit(vc_ctx *ctx, vc_command_buffer buffer, vc_queue queue_submit,
@@ -376,8 +521,20 @@ void vc_cmd_image_clear(vc_cmd_record record, vc_image image,
 
 void vc_cmd_bind_descriptor_set(vc_cmd_record record, vc_handle pipeline, vc_descriptor_set set, u32 set_dest);
 void vc_cmd_dispatch_compute(vc_cmd_record record, vc_compute_pipeline pipeline, u32 groups_x, u32 groups_y, u32 groups_z);
-void
-vc_cmd_push_constants(vc_cmd_record record, vc_handle pipeline, VkShaderStageFlags stage, u32 offset, u32 size, void *data);
+void vc_cmd_push_constants(vc_cmd_record record, vc_handle pipeline, VkShaderStageFlags stage, u32 offset, u32 size, void *data);
 
+void vc_cmd_draw(vc_cmd_record record, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
+void vc_cmd_bind_pipeline(vc_cmd_record record, vc_gfx_pipeline pipeline);
+
+// dynamic rendering
+void vc_cmd_begin_rendering(vc_cmd_record record, vc_rendering_info info);
+void vc_cmd_end_rendering(vc_cmd_record    record);
+
+// ## IMGUI ##
+void vc_imgui_setup(vc_ctx *ctx, vc_queue gui_queue, vc_swapchain swapchain);
+
+void vc_imgui_cleanup(vc_ctx   *ctx);
+void vc_cmd_imgui_end_frame_render(vc_cmd_record record, vc_image_view view, VkRect2D render_area, VkImageLayout layout);
+void vc_imgui_begin_frame(vc_ctx *ctx, vc_swapchain swp);
 #endif //__VULCAIN_H__
 

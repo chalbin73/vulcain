@@ -4,6 +4,7 @@
 
 #define VC_WS_GLFW
 #include <vulcain/win_sys/vc_glfw.h>
+#include <vulcain/utils/vc_imgui.h>
 
 vc_descriptor_set_layout pipe_layout = VC_NULL_HANDLE;
 
@@ -12,6 +13,7 @@ vc_image_view *image_views;
 vc_semaphore sig_sem;
 
 i32 size[2];
+VkFormat swapchain_format;
 
 uint64_t
 device_score(void *ud, VkPhysicalDevice phy)
@@ -24,8 +26,9 @@ GLFWwindow *window;
 void
 create_cbk(vc_ctx *ctx, void *udata, vc_swapchain_created_info info)
 {
-    image_views = mem_allocate(sizeof(vc_image_view) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
-    image_sets  = mem_allocate(sizeof(vc_descriptor_set) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
+    swapchain_format = info.swapchain_image_format;
+    image_views      = mem_allocate(sizeof(vc_image_view) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
+    image_sets       = mem_allocate(sizeof(vc_descriptor_set) * info.swapchain_image_count, MEMORY_TAG_RENDER_DATA);
 
     for(u32 i = 0; i < info.swapchain_image_count; i++)
     {
@@ -96,7 +99,7 @@ main(int argc, char **argv)
 
     vc_device_builder_set_score_func(b, device_score, NULL);
 
-    vc_queue comp_queue = vc_device_builder_add_queue(b, VK_QUEUE_COMPUTE_BIT);
+    vc_queue comp_queue = vc_device_builder_add_queue(b, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT);
     (void)main;
     vc_queue pres_queue;
     vc_device_builder_request_presentation_support( b, &pres_queue, glfw_ws );
@@ -114,29 +117,33 @@ main(int argc, char **argv)
         pipe_layout = vc_descriptor_set_layout_builder_build(&ctx, &builder, 0);
     }
 
-    u64 code_size            = 0;
-    u8 *code                 = fio_read_whole_file("pg_shaders/test.comp.spv", &code_size);
-    vc_compute_pipeline pipe = vc_compute_pipeline_create(
+
+    u64 code_size                 = 0;
+    u8 *code                      = fio_read_whole_file("pg_shaders/test.comp.spv", &code_size);
+    vc_compute_pipeline comp_pipe = vc_compute_pipeline_create(
         &ctx,
         code,
         code_size,
         "main",
-        1,
-        &pipe_layout,
-        1,
-        &(VkPushConstantRange)
+        (vc_pipeline_layout_info)
         {
-            .size       = sizeof(size),
-            .offset     = 0,
-            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .set_layout_count     = 1,
+            .set_layouts          = &pipe_layout,
+            .push_constants_count = 1,
+            .push_constants       = &(VkPushConstantRange)
+            {
+                .size       = sizeof(size),
+                .offset     = 0,
+                .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            }
         }
         );
-    (void)pipe;
+    (void)comp_pipe;
 
     vc_swapchain swapchain = vc_swapchain_create(
         &ctx,
         glfw_ws,
-        VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         (vc_format_query)
         {
             .required_optimal_tiling_features = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,
@@ -144,6 +151,83 @@ main(int argc, char **argv)
         create_cbk,
         destr_cbk,
         NULL
+        );
+
+    vc_imgui_setup(&ctx, comp_queue, swapchain);
+
+    u64 vert_size, frag_size;
+    u8 *vert_code, *frag_code;
+
+    vert_code = fio_read_whole_file("pg_shaders/tri.vert.spv", &vert_size);
+    frag_code = fio_read_whole_file("pg_shaders/tri.frag.spv", &frag_size);
+
+    vc_gfx_pipeline gfx_pipe = vc_gfx_pipeline_dynamic_create(
+        &ctx,
+        (vc_graphics_pipeline_desc)
+        {
+            .layout_info.push_constants_count = 0,
+            .layout_info.set_layout_count     = 0,
+
+            .shader_code = (vc_gfx_pipeline_code_info)
+            {
+                .vertex_code          = vert_code,
+                .fragment_code        = frag_code,
+                .vertex_code_size     = vert_size,
+                .fragment_code_size   = frag_size,
+                .vertex_entry_point   = "main",
+                .fragment_entry_point = "main",
+            },
+
+            .vertex_binding_count   = 0,
+            .topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .line_width             = 1.0f,
+            .viewport_scissor_count = 1,
+            .viewports              = &(VkViewport)
+            {
+                .x        = 0,
+                .y        = 0,
+                .width    = 1366,
+                .height   = 768,
+                .maxDepth = 1.0f,
+                .minDepth = 0.0f,
+            },
+            .scissors = &(VkRect2D)
+            {
+                .offset = { 0 },
+                .extent = { 1366, 768 },
+            },
+
+            .depth_test = FALSE,
+
+            .stencil_test = FALSE,
+
+            .enable_depth_clamp = FALSE,
+
+            .enable_depth_bias = FALSE,
+
+            .sample_count = VK_SAMPLE_COUNT_1_BIT,
+
+            .attachment_count  = 1,
+            .attachment_blends =
+                &(VkPipelineColorBlendAttachmentState){
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+                .colorBlendOp        = VK_BLEND_OP_ADD,
+                .alphaBlendOp        = VK_BLEND_OP_ADD,
+                .blendEnable         = VK_TRUE,
+                .colorWriteMask      = VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
+            },
+            .blend_constants     = { 1.0f, 1.0f, 1.0f, 1.0f },
+            .dynamic_state_count = 0,
+        },
+        (vc_pipeline_rendering_info)
+        {
+            .view_mask                = 0,
+            .color_attachment_count   = 1,
+            .color_attachment_formats = &swapchain_format,
+        }
         );
 
     vc_command_buffer comp_buf = vc_command_buffer_allocate(
@@ -154,6 +238,7 @@ main(int argc, char **argv)
 
     sig_sem = vc_semaphore_create(&ctx);
 
+    float clear_color[3];
     u64 prev_time = platform_millis();
     while( !glfwWindowShouldClose(window) )
     {
@@ -177,11 +262,12 @@ main(int argc, char **argv)
             rec,
             vc_swapchain_get_image(&ctx, swapchain, id),
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_NONE,
-            VK_ACCESS_SHADER_WRITE_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_GENERAL,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            //VK_IMAGE_LAYOUT_GENERAL,
             (VkImageSubresourceRange)
             {
                 .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -194,18 +280,70 @@ main(int argc, char **argv)
             VC_NULL_HANDLE
             );
 
-        vc_cmd_bind_descriptor_set(rec, pipe, image_sets[id], 0);
-        vc_cmd_push_constants(rec, pipe, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(size), size);
-        vc_cmd_dispatch_compute(rec, pipe, 1920 / 16, 1080 / 16, 1);
+        vc_cmd_begin_rendering(
+            rec,
+            (vc_rendering_info)
+            {
+                .view_mask          = 0,
+                .stencil_attachment = VC_NULL_HANDLE,
+                .depth_attachment   = VC_NULL_HANDLE,
+                .color_attachments  = &(vc_rendering_attachment_info)
+                {
+                    .clear_value        = (VkClearValue){ .color = (VkClearColorValue){ .float32 = { clear_color[0], clear_color[1], clear_color[1], 0.1f } } },
+                    .load_op            = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .store_op           = VK_ATTACHMENT_STORE_OP_STORE,
+                    .image_view         = image_views[id],
+                    .resolve_image_view = VC_NULL_HANDLE,
+                    .image_layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                },
+                .color_attachments_count = 1,
+                .layer_count             = 1,
+                .render_area             = (VkRect2D){ .offset = { 0, 0 }, .extent = { size[0], size[1] } },
+            }
+            );
+
+        vc_cmd_bind_pipeline(rec, gfx_pipe);
+        vc_cmd_draw(rec, 3, 1, 0, 0);
+
+        vc_cmd_end_rendering(rec);
+        /*
+           vc_cmd_bind_descriptor_set(rec, comp_pipe, image_sets[id], 0);
+           vc_cmd_push_constants(rec, comp_pipe, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(size), size);
+           vc_cmd_dispatch_compute(rec, comp_pipe, 1920 / 16, 1080 / 16, 1);
+         */
+
+        vc_imgui_begin_frame(&ctx, swapchain);
+
+        igBegin("Window", NULL, 0);
+
+        static bool b = FALSE;
+        igText("Hello ! ImGui's working !");
+        igText("This is some useful text");
+        igCheckbox("Demo window", &b);
+        igCheckbox("Another window", &b);
+
+        static f32 f = 0.0f;
+        igSliderFloat("Float", &f, 0.0f, 1.0f, "%.3f", 0);
+        igColorEdit3("clear color", (float *)&clear_color, 0);
+
+        igEnd();
+
+        vc_cmd_imgui_end_frame_render(
+            rec,
+            image_views[id],
+            (VkRect2D){ .offset = { 0 }, .extent = { size[0], size[1] } },
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            );
 
         vc_cmd_image_barrier(
             rec,
             vc_swapchain_get_image(&ctx, swapchain, id),
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            VK_ACCESS_SHADER_WRITE_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_ACCESS_NONE,
-            VK_IMAGE_LAYOUT_GENERAL,
+            //VK_IMAGE_LAYOUT_GENERAL,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             (VkImageSubresourceRange)
             {

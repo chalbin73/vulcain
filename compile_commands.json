@@ -3,6 +3,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -19,6 +20,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -35,6 +37,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -51,6 +54,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -67,6 +71,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -83,6 +88,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -99,6 +105,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -115,6 +122,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -131,6 +139,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -147,6 +156,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -163,22 +173,58 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
       "-c",
       "-o",
-      "obj/Debug/vulcain/vc_cmds.o",
-      "../src/vc_cmds.c"
+      "obj/Debug/vulcain/vc_buffer.o",
+      "../src/vc_buffer.c"
     ],
     "directory": "/home/albin/coding-projects/vulcain/build",
-    "file": "/home/albin/coding-projects/vulcain/src/vc_cmds.c",
-    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_cmds.o"
+    "file": "/home/albin/coding-projects/vulcain/src/vc_buffer.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_buffer.o"
   },
   {
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_cmd_objects.o",
+      "../src/vc_cmd_objects.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_cmd_objects.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_cmd_objects.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_commands.o",
+      "../src/vc_commands.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_commands.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_commands.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -195,6 +241,24 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_descriptor_sets.o",
+      "../src/descriptors/vc_descriptor_sets.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/descriptors/vc_descriptor_sets.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_descriptor_sets.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -211,6 +275,24 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_ds_alloc.o",
+      "../src/descriptors/vc_ds_alloc.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/descriptors/vc_ds_alloc.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_ds_alloc.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -227,6 +309,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -243,6 +326,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -259,6 +343,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -275,6 +360,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -291,6 +377,75 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_image.o",
+      "../src/vc_image.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_image.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_image.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_pipeline.o",
+      "../src/vc_pipeline.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/vc_pipeline.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_pipeline.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_set_layout_builder.o",
+      "../src/descriptors/vc_set_layout_builder.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/descriptors/vc_set_layout_builder.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_set_layout_builder.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
+      "-Wall",
+      "-Werror",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Debug/vulcain/vc_set_layout_cache.o",
+      "../src/descriptors/vc_set_layout_cache.c"
+    ],
+    "directory": "/home/albin/coding-projects/vulcain/build",
+    "file": "/home/albin/coding-projects/vulcain/src/descriptors/vc_set_layout_cache.c",
+    "output": "/home/albin/coding-projects/vulcain/build/obj/Debug/vulcain/vc_set_layout_cache.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -307,6 +462,7 @@
     "arguments": [
       "/usr/bin/clang",
       "-I../third_party/vma",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",
@@ -324,6 +480,7 @@
       "/usr/bin/clang",
       "-I../third_party/vma",
       "-I../src",
+      "-I../third_party/cimgui",
       "-Wall",
       "-Werror",
       "-g",

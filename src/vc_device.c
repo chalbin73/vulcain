@@ -295,9 +295,16 @@ vc_device_builder_end(vc_device_builder    builder)
 
     _vc_db_queue_allocator_destroy(&alloc);
 
+    VkPhysicalDeviceDynamicRenderingFeatures feat =
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+        .dynamicRendering = VK_TRUE,
+    };
+
     VkDeviceCreateInfo device_ci =
     {
         .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &feat,
         .queueCreateInfoCount    = darray_length(queues_ci),
         .pQueueCreateInfos       = queues_ci,
         .enabledLayerCount       = 0,
@@ -329,8 +336,8 @@ vc_device_builder_end(vc_device_builder    builder)
         vc_queue hndl                  = device_builder->queue_requests[i].hndl;
         _vc_queue_intern *queue_struct = vc_handles_manager_deref(&device_builder->ctx->handles_manager, hndl);
 
-        queue_struct->queue       = q;
-        queue_struct->queue_flags = device_builder->queue_requests[i].requested_flags;
+        queue_struct->queue              = q;
+        queue_struct->queue_flags        = device_builder->queue_requests[i].requested_flags;
         queue_struct->queue_family_index = device_builder->queue_requests[i].familly;
 
         // Set presentation queue

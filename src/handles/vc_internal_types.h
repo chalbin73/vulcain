@@ -88,6 +88,15 @@ typedef struct
 
 typedef struct
 {
+    // HEADER
+    vc_pipeline_type    type;
+
+    VkPipeline          pipeline;
+    VkPipelineLayout    layout;
+} _vc_gfx_pipeline_intern;
+
+typedef struct
+{
     VkDescriptorSet          set;
     VkDescriptorSetLayout    layout;
 } _vc_descriptor_set_intern;

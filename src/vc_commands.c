@@ -133,6 +133,57 @@ vc_cmd_image_clear(vc_cmd_record record, vc_image image,
     vkCmdClearColorImage(buf->buffer, img->image, layout, &clear_color, 1, &subres_range);
 }
 
+// Pipeline utils
+VkPipeline
+_vc_cmd_generic_pipeline_deref(vc_cmd_record record, vc_handle pipeline, VkPipelineBindPoint *bind_point, vc_pipeline_type *type, VkPipelineLayout *layout)
+{
+    _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
+    vc_pipeline_type *pipe         = vc_handles_manager_deref(&buf->record_ctx->handles_manager, pipeline);
+
+    VkPipelineBindPoint out_bind_point;
+    VkPipelineLayout out_layout;
+    vc_pipeline_type out_type;
+    VkPipeline out_pipeline;
+
+    if(*pipe == VC_PIPELINE_COMPUTE)
+    {
+        _vc_compute_pipeline_intern *pipe_i = (_vc_compute_pipeline_intern *)pipe;
+        out_bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+        out_layout     = pipe_i->layout;
+        out_type       = pipe_i->type;
+        out_pipeline   = pipe_i->pipeline;
+    }
+    else if(*pipe == VC_PIPELINE_GRAPHICS)
+    {
+        _vc_gfx_pipeline_intern *pipe_i = (_vc_gfx_pipeline_intern *)pipe;
+        out_bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        out_layout     = pipe_i->layout;
+        out_type       = pipe_i->type;
+        out_pipeline   = pipe_i->pipeline;
+    }
+    else
+    {
+        return VK_NULL_HANDLE;
+    }
+
+    if(bind_point)
+    {
+        *bind_point = out_bind_point;
+    }
+
+    if(type)
+    {
+        *type = out_type;
+    }
+
+    if(layout)
+    {
+        *layout = out_layout;
+    }
+
+    return out_pipeline;
+}
+
 void
 vc_cmd_dispatch_compute(vc_cmd_record record, vc_compute_pipeline pipeline, u32 groups_x, u32 groups_y, u32 groups_z)
 {
@@ -147,20 +198,11 @@ void
 vc_cmd_bind_descriptor_set(vc_cmd_record record, vc_handle pipeline, vc_descriptor_set set, u32 set_dest)
 {
     _vc_command_buffer_intern *buf   = (_vc_command_buffer_intern *)record;
-    vc_pipeline_type *pipe_i         = vc_handles_manager_deref(&buf->record_ctx->handles_manager, pipeline);
     _vc_descriptor_set_intern *set_i = vc_handles_manager_deref(&buf->record_ctx->handles_manager, set);
 
     VkPipelineLayout layout        = VK_NULL_HANDLE;
     VkPipelineBindPoint bind_point = 0;
-    if(*pipe_i == VC_PIPELINE_COMPUTE)
-    {
-        bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
-        layout     = ( (_vc_compute_pipeline_intern *)pipe_i )->layout;
-    }
-    else
-    {
-        return;
-    }
+    _vc_cmd_generic_pipeline_deref(record, pipeline, &bind_point, NULL, &layout);
 
     vkCmdBindDescriptorSets(buf->buffer, bind_point, layout, set_dest, 1, &set_i->set, 0, NULL);
 }
@@ -169,17 +211,109 @@ void
 vc_cmd_push_constants(vc_cmd_record record, vc_handle pipeline, VkShaderStageFlags stage, u32 offset, u32 size, void *data)
 {
     _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
-    vc_pipeline_type *pipe_i       = vc_handles_manager_deref(&buf->record_ctx->handles_manager, pipeline);
 
     VkPipelineLayout layout = VK_NULL_HANDLE;
-    if(*pipe_i == VC_PIPELINE_COMPUTE)
-    {
-        layout = ( (_vc_compute_pipeline_intern *)pipe_i )->layout;
-    }
-    else
-    {
-        return;
-    }
+    _vc_cmd_generic_pipeline_deref(record, pipeline, NULL, NULL, &layout);
+
     vkCmdPushConstants(buf->buffer, layout, stage, offset, size, data);
+}
+
+// ## DYNAMIC RENDERING ##
+
+VkRenderingAttachmentInfoKHR
+_vc_attach_info_to_vk_info(vc_ctx *ctx, vc_rendering_attachment_info info)
+{
+    _vc_image_view_intern *view = info.image_view == VC_NULL_HANDLE ?
+                                  NULL :
+                                  vc_handles_manager_deref(&ctx->handles_manager, info.image_view);
+    _vc_image_view_intern *resolve_view = info.resolve_image_view == VC_NULL_HANDLE ?
+                                          NULL :
+                                          vc_handles_manager_deref(&ctx->handles_manager, info.resolve_image_view);
+
+    VkRenderingAttachmentInfoKHR out_info =
+    {
+        .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+        .imageView          = view == NULL ? VK_NULL_HANDLE : view->view,
+        .imageLayout        = info.image_layout,
+        .resolveMode        = info.resolve_mode,
+        .resolveImageView   = resolve_view == NULL ? VK_NULL_HANDLE : resolve_view->view,
+        .resolveImageLayout = info.resolve_image_layout,
+        .loadOp             = info.load_op,
+        .storeOp            = info.store_op,
+        .clearValue         = info.clear_value,
+
+    };
+
+    return out_info;
+}
+
+void
+vc_cmd_begin_rendering(vc_cmd_record record, vc_rendering_info info)
+{
+    _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
+
+    VkRenderingInfo rend_info =
+    {
+        .sType                = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .pNext                = NULL,
+        .flags                = info.flags,
+        .renderArea           = info.render_area,
+        .layerCount           = info.layer_count,
+        .viewMask             = info.view_mask,
+        .colorAttachmentCount = info.color_attachments_count,
+        .pColorAttachments    = NULL,
+        .pDepthAttachment     = NULL,
+        .pStencilAttachment   = NULL,
+    };
+
+    VkRenderingAttachmentInfo *color_att_infos = alloca(sizeof(VkRenderingAttachmentInfo) * info.color_attachments_count);
+
+    for(u32 i = 0; i < info.color_attachments_count; i++)
+    {
+        color_att_infos[i]          = _vc_attach_info_to_vk_info(buf->record_ctx, info.color_attachments[i]);
+        rend_info.pColorAttachments = color_att_infos;
+    }
+
+    VkRenderingAttachmentInfo stencil_attachment;
+    VkRenderingAttachmentInfo depth_attachment;
+
+    if(info.depth_attachment)
+    {
+        depth_attachment           = _vc_attach_info_to_vk_info(buf->record_ctx, *info.depth_attachment);
+        rend_info.pDepthAttachment = &depth_attachment;
+    }
+
+    if(info.stencil_attachment)
+    {
+        stencil_attachment           = _vc_attach_info_to_vk_info(buf->record_ctx, *info.stencil_attachment);
+        rend_info.pStencilAttachment = &stencil_attachment;
+    }
+
+    vkCmdBeginRendering(buf->buffer, &rend_info);
+}
+
+void
+vc_cmd_end_rendering(vc_cmd_record    record)
+{
+    _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
+    vkCmdEndRendering(buf->buffer);
+}
+
+void
+vc_cmd_draw(vc_cmd_record record, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance)
+{
+    _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
+    vkCmdDraw(buf->buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+void
+vc_cmd_bind_pipeline(vc_cmd_record record, vc_gfx_pipeline pipeline)
+{
+    _vc_command_buffer_intern *buf = (_vc_command_buffer_intern *)record;
+
+    VkPipelineBindPoint bind_point = 0;
+    VkPipeline vk_pipeline         = _vc_cmd_generic_pipeline_deref(record, pipeline, &bind_point, NULL, NULL);
+
+    vkCmdBindPipeline(buf->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_pipeline);
 }
 

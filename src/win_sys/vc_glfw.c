@@ -24,6 +24,31 @@ _vc_ws_get_fb_size_glfw(void *udata, u32 *w, u32 *h)
     *h = (u32)h_r;
 }
 
+#define CIMGUI_USE_GLFW
+#include "../utils/vc_imgui.h"
+
+void
+_vc_ws_ig_init(void   *udata)
+{
+    GLFWwindow *win = (GLFWwindow *)udata;
+
+    ImGui_ImplGlfw_InitForVulkan(win, TRUE);
+}
+
+void
+_vc_ws_ig_begin_frame(void   *udata)
+{
+    //GLFWwindow *win = (GLFWwindow *)udata;
+    ImGui_ImplGlfw_NewFrame();
+}
+
+void
+_vc_ws_ig_shutdown(void   *udata)
+{
+    //GLFWwindow *win = (GLFWwindow *)udata;
+    ImGui_ImplGlfw_Shutdown();
+}
+
 vc_windowing_system
 vc_ws_glfw(GLFWwindow   *window)
 {
@@ -32,7 +57,11 @@ vc_ws_glfw(GLFWwindow   *window)
 
     sys.create_surface = _vc_ws_create_surface_glfw;
     sys.get_fb_size    = _vc_ws_get_fb_size_glfw;
+    sys.ig_init        = _vc_ws_ig_init;
+    sys.ig_begin_frame = _vc_ws_ig_begin_frame;
+    sys.ig_shutdown    = _vc_ws_ig_shutdown;
     sys.udata          = window;
+
 
     return sys;
 }
