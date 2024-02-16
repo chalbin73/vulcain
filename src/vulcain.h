@@ -115,6 +115,7 @@ typedef struct
     uint32_t         swapchain_image_count;
     vc_image        *images;
     vc_image_view   *image_views;
+
 } vc_swapchain_created_info;
 
 typedef void (*vc_swapchain_callback_func)(vc_ctx *ctx, void *udata, vc_swapchain_created_info);
@@ -134,8 +135,7 @@ vc_swpchn_img_id  vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain
 vc_image          vc_swapchain_get_image(vc_ctx *ctx, vc_swapchain swapchain, vc_swpchn_img_id index);
 void              vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
 void              vc_swapchain_get_info(vc_ctx *ctx, vc_swapchain swapchain, vc_swapchain_created_info *info_out);
-void
-vc_swapchain_present_images(vc_ctx *ctx, u32 swapchain_count, vc_swapchain *swapchains, vc_swpchn_img_id *image_ids, vc_queue presentation_queue, u32 wait_semaphore_count, vc_semaphore *wait_semaphores);
+void              vc_swapchain_present_images(vc_ctx *ctx, u32 swapchain_count, vc_swapchain *swapchains, vc_swpchn_img_id *image_ids, vc_queue presentation_queue, u32 wait_semaphore_count, vc_semaphore *wait_semaphores);
 
 // ## COMMAND BUFFERS/POOLS ##
 

@@ -297,6 +297,7 @@ main(int argc, char **argv)
         vc_swapchain_created_info created_i_2;
         vc_swapchain_get_info(&ctx, swapchain_2, &created_i_2);
 
+
         //puts("Beginning");
         vc_cmd_record rec = vc_command_buffer_begin(&ctx, comp_buf, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
@@ -374,10 +375,7 @@ main(int argc, char **argv)
                 .offset =
                 {
                     0, 0
-                }, .extent =
-                {
-                    size[0], size[1]
-                }
+                }, .extent = created_i.swapchain_extent
             },
         };
 
@@ -396,10 +394,7 @@ main(int argc, char **argv)
             .offset =
             {
                 0
-            }, .extent =
-            {
-                .width = size_2[0], .height = size_2[1]
-            }
+            }, .extent = created_i_2.swapchain_extent
         };
 
         render_info.color_attachments->image_view = created_i_2.image_views[id_2];
