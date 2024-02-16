@@ -27,6 +27,7 @@ typedef struct
     u32                           image_count;
     VkExtent2D                    image_extent;
     vc_image                     *swapchain_images;
+    vc_image_view                *swapchain_image_views; // Swapchain image views are 2D, color ... Basic image views are sufficient
 
     void                         *clbk_udata;
     vc_swapchain_callback_func    creation_callback;

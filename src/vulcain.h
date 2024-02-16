@@ -108,12 +108,13 @@ b8       vc_format_query_index(vc_ctx *ctx, vc_format_query query, vc_format_set
  */
 typedef struct
 {
-    VkExtent2D      swapchain_extent;
-    VkFormat        swapchain_image_format;
-    uint32_t        swapchain_image_count;
-    vc_swapchain    swapchain;
+    VkExtent2D       swapchain_extent;
+    VkFormat         swapchain_image_format;
+    vc_swapchain     swapchain;
 
-    vc_image       *images;
+    uint32_t         swapchain_image_count;
+    vc_image        *images;
+    vc_image_view   *image_views;
 } vc_swapchain_created_info;
 
 typedef void (*vc_swapchain_callback_func)(vc_ctx *ctx, void *udata, vc_swapchain_created_info);
@@ -132,6 +133,9 @@ void              vc_swapchain_present_image(vc_ctx *ctx, vc_swapchain swapchain
 vc_swpchn_img_id  vc_swapchain_acquire_image(vc_ctx *ctx, vc_swapchain swapchain, vc_semaphore *signal_semaphore);
 vc_image          vc_swapchain_get_image(vc_ctx *ctx, vc_swapchain swapchain, vc_swpchn_img_id index);
 void              vc_handle_destroy(vc_ctx *ctx, vc_handle hndl);
+void              vc_swapchain_get_info(vc_ctx *ctx, vc_swapchain swapchain, vc_swapchain_created_info *info_out);
+void
+vc_swapchain_present_images(vc_ctx *ctx, u32 swapchain_count, vc_swapchain *swapchains, vc_swpchn_img_id *image_ids, vc_queue presentation_queue, u32 wait_semaphore_count, vc_semaphore *wait_semaphores);
 
 // ## COMMAND BUFFERS/POOLS ##
 
@@ -531,10 +535,10 @@ void vc_cmd_begin_rendering(vc_cmd_record record, vc_rendering_info info);
 void vc_cmd_end_rendering(vc_cmd_record    record);
 
 // ## IMGUI ##
-void vc_imgui_setup(vc_ctx *ctx, vc_queue gui_queue, vc_swapchain swapchain);
+void vc_imgui_setup(vc_ctx *ctx, vc_queue gui_queue, vc_windowing_system windowing_system, VkFormat image_formats);
 
 void vc_imgui_cleanup(vc_ctx   *ctx);
 void vc_cmd_imgui_end_frame_render(vc_cmd_record record, vc_image_view view, VkRect2D render_area, VkImageLayout layout);
-void vc_imgui_begin_frame(vc_ctx *ctx, vc_swapchain swp);
+void vc_imgui_begin_frame(vc_ctx   *ctx);
 #endif //__VULCAIN_H__
 

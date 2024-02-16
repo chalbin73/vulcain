@@ -80,6 +80,7 @@ vc_swapchain_create(vc_ctx                       *ctx,
 
     // Save format
     s->surface_format = surface_formats[selected_format];
+    //s->surface_format.format = VK_FORMAT_B8G8R8A8_SRGB;
 
     vc_info(
         "Format selected for swapchain : format='%s' -- color_space='%s'.",
@@ -149,8 +150,10 @@ _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
         for(u32 i = 0; i < s->image_count; i++)
         {
             vc_handles_manager_destroy_handle(&ctx->handles_manager, s->swapchain_images[i]);
+            vc_handles_manager_destroy_handle(&ctx->handles_manager, s->swapchain_image_views[i]);
         }
         mem_free(s->swapchain_images);
+        mem_free(s->swapchain_image_views);
         //  Call destroy callback
         s->destruction_callback(ctx, s->clbk_udata, s->created_info);
         //  Destroy swapchain and objs
@@ -182,6 +185,7 @@ _vc_swapchain_rebuild(vc_ctx *ctx, vc_swapchain hndl, _vc_swapchain_intern *s)
 
     c_info.swapchain_image_count = s->image_count;
     c_info.images                = s->swapchain_images;
+    c_info.image_views           = s->swapchain_image_views;
     vc_debug("Creation of swapchain object successful. image_count=%d", s->image_count);
     s->created_info = c_info;
     //  Call create callback
@@ -218,7 +222,8 @@ _vc_swapchain_build(vc_ctx *ctx, _vc_swapchain_intern *s)
 
     // Get image handles
     vkGetSwapchainImagesKHR(ctx->current_device, s->swapchain, &s->image_count, NULL);
-    s->swapchain_images = mem_allocate(sizeof(vc_image) * s->image_count, MEMORY_TAG_RENDERER);
+    s->swapchain_images      = mem_allocate(sizeof(vc_image) * s->image_count, MEMORY_TAG_RENDERER);
+    s->swapchain_image_views = mem_allocate(sizeof(vc_image_view) * s->image_count, MEMORY_TAG_RENDERER);
     VkImage *images = alloca(sizeof(VkImage) * s->image_count);
     vkGetSwapchainImagesKHR(ctx->current_device, s->swapchain, &s->image_count, images);
 
@@ -232,7 +237,15 @@ _vc_swapchain_build(vc_ctx *ctx, _vc_swapchain_intern *s)
             .image_format       = s->surface_format.format,
         };
 
-        s->swapchain_images[i] = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE, &img_intern);
+        s->swapchain_images[i]      = vc_handles_manager_walloc(&ctx->handles_manager, VC_HANDLE_IMAGE, &img_intern);
+        s->swapchain_image_views[i] = vc_image_view_create(
+            ctx,
+            s->swapchain_images[i],
+            VK_IMAGE_VIEW_TYPE_2D,
+            VC_COMP_MAP_ID,
+            VC_IMG_SUBRES_COLOR_1
+            );
+
     }
 }
 
@@ -300,10 +313,65 @@ vc_swapchain_present_image(vc_ctx *ctx, vc_swapchain swapchain, vc_queue present
     }
 }
 
+void
+vc_swapchain_present_images(vc_ctx *ctx, u32 swapchain_count, vc_swapchain *swapchains, vc_swpchn_img_id *image_ids, vc_queue presentation_queue, u32 wait_semaphore_count, vc_semaphore *wait_semaphores)
+{
+    VkSwapchainKHR *swps = alloca(sizeof(VkSwapchainKHR) * swapchain_count);
+    VkSemaphore *sems    = alloca(sizeof(VkSemaphore) * wait_semaphore_count);
+
+    for(u32 i = 0; i < swapchain_count; i++)
+    {
+        _vc_swapchain_intern *swp = vc_handles_manager_deref(&ctx->handles_manager, swapchains[i]);
+
+        swps[i] = swp->swapchain;
+    }
+
+    for(u32 i = 0; i < wait_semaphore_count; i++)
+    {
+        _vc_semaphore_intern *sem = vc_handles_manager_deref(&ctx->handles_manager, wait_semaphores[i]);
+
+        sems[i] = sem->semaphore;
+    }
+
+    _vc_queue_intern *que = vc_handles_manager_deref(&ctx->handles_manager, presentation_queue);
+
+    VkResult *present_results = alloca(sizeof(VkResult) * swapchain_count);
+    VkPresentInfoKHR info     =
+    {
+        .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = wait_semaphore_count,
+        .pWaitSemaphores    = sems,
+        .swapchainCount     = swapchain_count,
+        .pSwapchains        = swps,
+        .pImageIndices      = image_ids,
+        .pResults           = present_results,
+    };
+    vkQueuePresentKHR(que->queue, &info);
+
+    for(u32 i = 0; i < swapchain_count; i++)
+    {
+        if(present_results[i] == VK_ERROR_OUT_OF_DATE_KHR || present_results[i] == VK_SUBOPTIMAL_KHR)
+        {
+            vkDeviceWaitIdle(ctx->current_device);
+            vc_debug("PRESENT: Resizing");
+            _vc_swapchain_intern *swp = vc_handles_manager_deref(&ctx->handles_manager, swapchains[i]);
+            _vc_swapchain_rebuild(ctx, swapchains[i], swp);
+        }
+    }
+}
+
 vc_image
 vc_swapchain_get_image(vc_ctx *ctx, vc_swapchain swapchain, vc_swpchn_img_id index)
 {
     _vc_swapchain_intern *swp = vc_handles_manager_deref(&ctx->handles_manager, swapchain);
     return swp->swapchain_images[index];
+}
+
+void
+vc_swapchain_get_info(vc_ctx *ctx, vc_swapchain swapchain, vc_swapchain_created_info *info_out)
+{
+    _vc_swapchain_intern *swp = vc_handles_manager_deref(&ctx->handles_manager, swapchain);
+
+    *info_out = swp->created_info;
 }
 

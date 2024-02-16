@@ -6,23 +6,22 @@
 
 typedef struct
 {
-    VkDescriptorPool    imgui_pool;
-    vc_swapchain        swapchain;
+    VkDescriptorPool       imgui_pool;
+    vc_windowing_system    win_sys;
 } _vc_imgui_ctx;
 
 void
-vc_imgui_setup(vc_ctx *ctx, vc_queue gui_queue, vc_swapchain swapchain)
+vc_imgui_setup(vc_ctx *ctx, vc_queue gui_queue, vc_windowing_system windowing_system, VkFormat image_formats)
 {
     igCreateContext(NULL);
 
-    _vc_queue_intern *queue_i   = vc_handles_manager_deref(&ctx->handles_manager, gui_queue);
-    _vc_swapchain_intern *swp_i = vc_handles_manager_deref(&ctx->handles_manager, swapchain);
+    _vc_queue_intern *queue_i = vc_handles_manager_deref(&ctx->handles_manager, gui_queue);
 
-    vc_trace("Setting up ImGui with '%s'.", swp_i->windowing_system.windowing_system_name);
+    vc_trace("Setting up ImGui with '%s'.", windowing_system.windowing_system_name);
 
     ctx->imgui_ctx = mem_allocate(sizeof(_vc_imgui_ctx), MEMORY_TAG_RENDERER);
     _vc_imgui_ctx *i_ctx = ctx->imgui_ctx;
-    i_ctx->swapchain = swapchain;
+    i_ctx->win_sys = windowing_system;
 
     VkDescriptorPoolCreateInfo pool_info =
     {
@@ -80,22 +79,22 @@ vc_imgui_setup(vc_ctx *ctx, vc_queue gui_queue, vc_swapchain swapchain)
         .MinImageCount         = 3,
         .ImageCount            = 3,
         .UseDynamicRendering   = true,
-        .ColorAttachmentFormat = swp_i->surface_format.format,
+        .ColorAttachmentFormat = image_formats,
         .MSAASamples           = VK_SAMPLE_COUNT_1_BIT,
     };
 
-    swp_i->windowing_system.ig_init(swp_i->windowing_system.udata);
+    windowing_system.ig_init(windowing_system.udata);
     ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
 
     ImGui_ImplVulkan_CreateFontsTexture();
 }
 
 void
-vc_imgui_begin_frame(vc_ctx *ctx, vc_swapchain swp)
+vc_imgui_begin_frame(vc_ctx   *ctx)
 {
-    _vc_swapchain_intern *swp_i = vc_handles_manager_deref(&ctx->handles_manager, swp);
     ImGui_ImplVulkan_NewFrame();
-    swp_i->windowing_system.ig_begin_frame(ctx->windowing_system.udata);
+    _vc_imgui_ctx *i_ctx = ctx->imgui_ctx;
+    i_ctx->win_sys.ig_begin_frame(ctx->windowing_system.udata);
     igNewFrame();
 }
 
@@ -134,10 +133,9 @@ vc_imgui_cleanup(vc_ctx   *ctx)
 {
 
     ImGui_ImplVulkan_Shutdown();
-    _vc_imgui_ctx *i_ctx        = ctx->imgui_ctx;
-    _vc_swapchain_intern *swp_i = vc_handles_manager_deref(&ctx->handles_manager, i_ctx->swapchain);
+    _vc_imgui_ctx *i_ctx = ctx->imgui_ctx;
     vkDestroyDescriptorPool(ctx->current_device, i_ctx->imgui_pool, NULL);
-    swp_i->windowing_system.ig_shutdown(ctx->windowing_system.udata);
+    i_ctx->win_sys.ig_shutdown(i_ctx->win_sys.udata);
     mem_free(ctx->imgui_ctx);
 }
 
